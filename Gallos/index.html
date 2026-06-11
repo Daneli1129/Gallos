@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gallo Gold — Bruno's</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/shared.css">
+<style>
+  /* ── MEJORAS RESPONSIVAS PARA EL LOGIN ── */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Animación de entrada suave */
+  .lw {
+    animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (min-width: 768px) {
+    .lw {
+      max-width: 420px;
+      gap: 32px;
+    }
+    .l-card {
+      padding: 36px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.9), 0 0 60px rgba(200,90,58,0.10);
+    }
+    .l-rooster {
+      width: 64px; height: 64px;
+    }
+    .l-brand {
+      font-size: 36px;
+      letter-spacing: 4px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Quité los estilos en línea para dejar que shared.css haga su trabajo con #login-screen -->
+<div id="login-screen">
+  <div class="lw">
+
+    <!-- Logo -->
+    <div style="text-align:center;">
+      <div class="l-rooster">
+        <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="30" cy="30" r="28" stroke="currentColor" stroke-width="1.2" opacity=".15"/>
+          <path d="M12 32C8 44 18 52 30 50c8-1 16-6 20-14 4-8 2-16-4-20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".4"/>
+          <path d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 32L4 30l6 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="18" cy="28" r="1.8" fill="currentColor" opacity=".8"/>
+          <path d="M24 46c-2 6 2 10 6 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M40 24c4-4 10-6 8-12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M42 26c6-2 10-6 8-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="l-brand">Gallo Gold</div>
+      <div class="l-sub">Bruno's</div>
+    </div>
+
+    <div class="l-div"></div>
+
+    <!-- Card de login -->
+    <div class="l-card">
+      <div class="l-title">Acceso al Sistema</div>
+
+      <div class="l-field">
+        <label class="l-label" for="li-u">Usuario</label>
+        <input class="l-input" id="li-u" type="text" placeholder="Usuario" autocomplete="off">
+      </div>
+
+      <div class="l-field">
+        <label class="l-label" for="li-p">Contraseña</label>
+        <input class="l-input" id="li-p" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <div class="l-err" id="l-err">Usuario o contraseña incorrectos.</div>
+
+      <button class="l-btn" onclick="doLogin()">Entrar</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── USUARIOS ──────────────────────────────────────────────
+const USERS = [
+  { usuario: 'admin',     pass: 'admin', nombre: 'Bruno García',   rol: 'admin' },
+  { usuario: 'empleado',  pass: '123',   nombre: 'María Ramírez',  rol: 'empleado' },
+  { usuario: 'empleado2', pass: '456',   nombre: 'Carlos Mendoza', rol: 'empleado' },
+];
+
+// ── LOGIN ──────────────────────────────────────────────────
+function doLogin() {
+  const u     = document.getElementById('li-u').value.trim();
+  const p     = document.getElementById('li-p').value;
+  const found = USERS.find(x => x.usuario === u && x.pass === p);
+
+  if (!found) {
+    document.getElementById('l-err').classList.add('show');
+    document.getElementById('li-p').value = '';
+    return;
+  }
+
+  document.getElementById('l-err').classList.remove('show');
+
+  // Guardar sesión en sessionStorage
+  sessionStorage.setItem('currentUser', JSON.stringify(found));
+
+  // Redirigir según rol
+  if (found.rol === 'admin') {
+    window.location.href = 'admin/index.html';
+  } else {
+    window.location.href = 'empleado/index.html';
+  }
+}
+
+// ── ATAJOS DE TECLADO ─────────────────────────────────────
+document.getElementById('li-u').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('li-p').focus();
+});
+document.getElementById('li-p').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// Redirección si ya hay sesión
+const saved = sessionStorage.getItem('currentUser');
+if (saved) {
+  try {
+    const u = JSON.parse(saved);
+    if (u?.rol === 'admin')    window.location.href = 'admin/index.html';
+    else if (u?.rol === 'empleado') window.location.href = 'empleado/index.html';
+  } catch(e) {
+    sessionStorage.removeItem('currentUser');
+  }
+}
+</script>
+</body>
+</html>

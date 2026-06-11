@@ -1,0 +1,301 @@
+================================================================================
+  GALLO GOLD — BRUNO'S
+  Sistema de Registro de Peleas de Gallos
+  Resumen Completo del Proyecto
+================================================================================
+
+1. DESCRIPCIÓN GENERAL
+----------------------
+Sistema web front-end (sin backend ni BD) para registro y control de
+apuestas en peleas de gallos. Corre 100% en memoria (sessionStorage).
+Diseñado para señores de rancho — interfaz intuitiva, oscura, cobre/ámbar.
+
+Tecnologías: HTML + CSS + JS vanilla, jsPDF (CDN), Google Fonts (Outfit,
+JetBrains Mono). Sin frameworks ni librerías externas (solo jsPDF para
+exportación PDF).
+
+2. ESTRUCTURA DE ARCHIVOS
+--------------------------
+Gallos/
+  index.html            ← Login page (login inline, no shared.js)
+  shared/
+    shared.css          ← Variables CSS, login styles, confirm modal,
+                           toast, .p-card/.p-stats/.p-rank, animaciones
+    shared.js           ← Auth, estado global (jugadores, peleas, bitácora),
+                           utilidades (fmt, initials), confirm modal, toast,
+                           I (iconos SVG), calcFicha, logAction, getPelea
+  admin/
+    index.html          ← Shell admin: sidebar, topbar, 6 tabs
+    admin.css           ← Estilos admin: peleas, fichas, jugadores,
+                           dashboard, diario/semanal, bitácora, PDF,
+                           responsive
+    admin.js            ← Lógica admin: nav, tabs, renderDashboard,
+                           renderJugList, renderFicha (solo lectura),
+                           renderPeleas (solo lectura, filtros),
+                           renderPeriodo (diario/semanal), renderBitacora,
+                           exportPDF, keyboard shortcuts
+  empleado/
+    index.html          ← Shell empleado: sidebar, topbar, 1 tab, logout
+    empleado.css        ← Estilos empleado: peleas (compact), modal
+                           apostador (4 pasos), responsive
+    empleado.js         ← Lógica empleado: buildPB (compacto c/ botón +),
+                           nuevaPelea, cambiarEstadoPelea, ganarPelea,
+                           confirmEliminar, modal apostador completo
+                           (búsqueda, sugerencias, equipo, monto, confirmar)
+
+3. USUARIOS DEL SISTEMA
+-------------------------
+  Usuario     Contraseña  Rol       Nombre
+  admin       admin       admin     Bruno García
+  empleado    123         empleado  María Ramírez
+  empleado2   456         empleado  Carlos Mendoza
+
+Login en index.html — query a USERS, redirección según rol.
+admin → admin/index.html
+empleado → empleado/index.html
+
+4. ESTADO GLOBAL (shared.js)
+-----------------------------
+Variables compartidas por admin y empleado:
+  jugadores[]     ← Array de objetos jugador
+                    { id, nombre, color, saldoAnt, apuestas[], addedBy, addedAt }
+  peleas[]        ← Array de objetos pelea
+                    { num, estado, apuestas[], minimizada, ganador }
+  peleaActual     ← Número de pelea más reciente
+  bitacora[]      ← Historial de movimientos (máx 300)
+  currentUser     ← Usuario logueado (sessionStorage)
+  selectedJugador ← Jugador seleccionado para ver ficha
+  currentTab      ← Tab activo
+  logFiltro       ← Filtro activo de bitácora
+
+Jugadores predefinidos (7): Heri, Picuni, Jaime Sosa, Arias, Maldonado,
+Renata, Tomas. Se pueden agregar más desde el modal de empleado.
+
+5. PELEAS — MODELO DE DATOS
+----------------------------
+Cada pelea:
+  num: int            ← Número único
+  estado: string      ← 'espera' | 'activa' | 'cerrada'
+  apuestas: array     ← [{ id, jugadorId, nombre, bando, monto, resultado }]
+  minimizada: bool    ← Colapsada en UI
+  ganador: string?    ← 'verde' | 'rojo' | undefined
+
+La apuesta tiene resultado: 'pendiente' | 'ganada' | 'perdida'.
+
+6. SISTEMA DE APUESTAS (lógica financiera)
+--------------------------------------------
+- 2 equipos por pelea: Rojo y Verde
+- Cada jugador apuesta por un equipo
+- Cuando se declara ganador, el 90% del pozo del perdedor va al ganador
+- calcFicha(j): calcula saldo = totalGanadas - (saldoAnt + totalPerdidas)
+- totalGanadas = sum(montos * 0.9) de apuestas ganadas
+- El saldo se muestra en fichas con signo (+$X.XX o −$X.XX)
+- Modal de apuesta muestra alerta si el jugador tiene saldo negativo
+  (la apuesta se permite igual, pero queda registrado quién autorizó)
+
+7. FUNCIONALIDAD POR PANEL
+----------------------------
+
+ADMIN (solo lectura en peleas):
+  - Dashboard: Cards con totales (peleas, apuestas, dinero en juego,
+    jugadores) + ranking top 5 jugadores por actividad
+  - Jugadores: Lista con búsqueda, ordenados por apuestas descendente
+  - Fichas: Vista detalle del jugador — balance, apóstrofe, saldo anterior
+    editable, tabla pérdidas/ganadas, totales, resultado final, PDF
+  - Peleas: Vista compacta con filtros por estado, solo lectura
+  - Diario / Semanal: Resumen con stat boxes (Ganan / Pierden / Corte),
+    mini-fichas por jugador, descarga PDF individual o masivo
+  - Movimientos (Bitácora): Feed de eventos con filtros por tipo
+    (todas/apuestas/resultados/eliminadas/estados), tiempo relativo
+  - Atajos: R=Resumen, F=Fichas, P=Peleas, D=Diario, S=Semanal,
+    M=Movimientos
+
+EMPLEADO (control total):
+  - Peleas: Control completo — crear, eliminar, cambiar estado (espera/
+    activa/cerrada), declarar ganador, agregar/quitar apostadores
+  - Botón "+" rápido en head de pelea (sin expandir)
+  - Modal de apuesta en 4 pasos:
+      1. Buscar/seleccionar jugador (con sugerencias, o registrar nuevo)
+      2. Seleccionar equipo (Rojo/Verde)
+      3. Seleccionar monto (500/1000/1500/2000/Otro)
+      4. Confirmar (con alerta si saldo negativo + registro de autorización)
+  - Confirmación modal personalizada para cerrar peleas/eliminar
+  - Atajo: N = Nueva pelea
+
+8. UI — DISEÑO Y COMPONENTES
+------------------------------
+Paleta cobre/ámbar/carmesí sobre fondo oscuro:
+  --bg: #060606 (fondo principal)
+  --gold: #C85A3A / --accent: #C85A3A (cobre/accent)
+  --gold2: #D4A373 / --accent2: #D4A373 (ámbar)
+  --rojo2: #C41E1E (carmesí)
+  --green2: #2DAA5E (verde para ganancias)
+  --text: #F0EDE8 (texto claro)
+
+Sidebar: Colapsada por defecto, se expande en hover (sin toggle).
+  Ancho colapsado: 60px, expandido: 220px.
+  Topbar: Nombre de usuario, avatar con iniciales.
+
+Fight blocks (PB = Pelea Block):
+  - pb-head: Flex left (num, pill estado, total) + right (botón +,
+    state group, delete, chevron). Padding 8px 12px.
+  - pb-state-group: Segmented control con 3 botones SVG (pause/play/stop)
+    de 20×18px. Icons from I object.
+  - pb-st: active-e (gold) / active-a (green) / active-c (red)
+  - pb-winner: Tag con trofeo SVG + "Ganó Verde/Rojo"
+  - pb-reparte: Grid 2 col con "Si gana Rojo → $X" / "Si gana Verde → $Y"
+  - pelea-bar: Barra proporcional rojo/verde
+  - Auto-minimize: Peleas no-activas empiezan colapsadas
+  - pb-quick-add: Botón "+" en head (22×20), gradient, siempre visible
+    excepto en peleas cerradas
+
+Filter tabs (pf-row):
+  - 4 botones: Todas (N) / Activas (N) / Espera (N) / Cerradas (N)
+  - Estilo segmented control con counts
+  - Overflow-x: auto en mobile
+  - Resetea a 'todas' al crear nueva pelea
+
+Ficha (admin):
+  - fc-head: Avatar + nombre + balance grande
+  - fc-actions: Botones PDF Hoy / PDF Semanal
+  - fc-saldo-ant: Input editable de saldo anterior
+  - fc-tabla: Tabla pérdidas/ganadas lado a lado
+  - fc-tots: Grid con saldo inicial / total perdido / total ganado
+  - fc-saldo-final: Resultado final con badge GANADOR/PERDEDOR
+
+Dashboard (admin):
+  - dash-grid: 4 cards (peleas, apuestas, en juego, jugadores)
+  - dash-section: Ranking top 5 con avatar, nombre, apuestas, saldo
+  - dash-rank: Lista con posición (top 3 destacado)
+
+Diario/Semanal (admin):
+  - ph-hdr: Título + fecha + participantes
+  - ph-stats: 3 stat boxes (Ganan / Pierden / Corte) con valor grande
+  - mini-fichas: Cards por jugador con misma estructura que ficha pero
+    compacta (head, body pérdidas/ganadas, totales, resultado, botón PDF)
+
+Bitácora (admin):
+  - log-hdr: "Registro" + fecha + total
+  - log-filters: 5 botones con SVG + label (todas/apuestas/resultados/
+    eliminadas/estados)
+  - log-entry: Card con border-color left, indicador circular, tag label,
+    mensaje HTML, meta (actor + tiempo relativo)
+  - fmtTimeRel(): "ahora" / "hace X min" / "hace Xh" / hora exacta
+  - tipoLogInfo: Mapa tipo → { label, icon, color }
+
+Tabs (ambos):
+  - Nav sidebar con iconos SVG + label + tooltip
+  - Bottom nav mobile con iconos
+  - Solo un tab visible a la vez (clase .visible)
+
+9. UTILIDADES Y COMPONENTES COMPARTIDOS
+-----------------------------------------
+  toast(msg, type)         → Notificación 2.8s auto-dismiss
+                             type: 'success' | 'error' | 'info'
+  showConfirm(msg, icon,   → Modal de confirmación Promise-based
+               btnText,     (reemplaza a confirm() nativo)
+               btnClass)
+  fmt(n)                   → Formato moneda: $1,234.00
+  initials(n)              → Iniciales de nombre (max 2)
+  nowStr()                 → Hora HH:MM:SS
+  today()                  → Fecha larga en español
+  fmtTime(d)               → Hora HH:MM de objeto Date
+  logAction(tipo, msg, icon)→ Agrega a bitácora
+  calcFicha(j)             → { saldo, ganadas[], perdidas[], enJuego[],
+                               totalGanadas, totalPerdidas, saldoAntTotal }
+  getPelea(num)            → Obtiene/crea pelea
+  addApuestaToPelea(num, ap)→ Agrega apuesta evitando duplicados
+  eliminarPelea(num)       → Elimina pelea + limpia apuestas de jugadores
+
+  I (iconos SVG): plus, x, dl, trophy, pause, play, stop, file, eye,
+                   dg (dot verde), dr (dot rojo), dy (dot yellow)
+
+10. PDF EXPORT
+---------------
+Usa jsPDF (CDN). buildPDF(j, tipo) genera documento letter:
+  - Encabezado "GALLO GOLD BRUNO'S"
+  - Datos del apostador
+  - Tabla pérdidas/ganadas lado a lado
+  - Totales: saldo anterior, total perdidas, total ganadas
+  - Saldo final con resultado (GANA/PIERDE) en color
+  - exportPDF(jId, tipo): individual
+  - exportPDF_bulk(tipo): todos los jugadores con apuestas
+
+11. TOAST — SISTEMA DE NOTIFICACIONES
+---------------------------------------
+HTML en shared: #toast (fijo bottom-left), #tmsg, #tline.
+Animación slide-in + barra de progreso.
+3 colores: success (verde), error (rojo), info (gold).
+2.8s de duración con data-type para colorear.
+
+12. CONFIRM MODAL — REEMPLAZO DE CONFIRM()
+--------------------------------------------
+.showConfirm() devuelve Promise.
+Renderiza overlay + box con icono, mensaje HTML, botón Cancelar y
+botón Aceptar (primary o danger).
+Teclado: Escape=cancelar, Enter=aceptar.
+Se crea una vez y se reusa (no se duplica en DOM).
+
+13. TEORÍA DEL NEGOCIO
+-----------------------
+Cada pelea tiene 2 equipos (Rojo/Verde). Los jugadores apuestan por
+un equipo. Al declarar ganador:
+  - Apuestas del equipo perdedor → se marcan 'perdida'
+  - Apuestas del equipo ganador → se marcan 'ganada', reciben 90% de
+    su monto apostado (el 10% es la casa/comisión)
+  - El pozo del perdedor se reparte proporcionalmente entre los ganadores
+  - Fórmula: Si gana Rojo → cada Rojo gana (apuesta * 0.9)
+             Si gana Verde → cada Verde gana (apuesta * 0.9)
+  - En reparte se muestra: "Si gana Rojo → $(totalVerde * 0.9)"
+                           "Si gana Verde → $(totalRojo * 0.9)"
+
+14. RESPONSIVE
+--------------
+Desktop (>1024px): Sidebar visible (hover), layout completo.
+Tablet (768-1023px): Toolbar padding reducido, sidebar colapsado.
+Mobile (<768px):
+  - Sidebar invisible, topbar compacto con hamburguesa
+  - Bottom nav fijo con iconos
+  - P-cols cambia de grid a column (Rojo arriba, Verde abajo)
+  - Fichas: tabla pierde/gana cambia a vertical
+  - Filtros: pf-row con overflow-x:auto, .ctrl-sep oculto
+  - Botones de estado ocultan texto (solo icono)
+  - Modal: ocupa casi full screen (padding 8px)
+
+15. REGLAS DE NEGOCIO
+----------------------
+- No se permite cerrar pelea sin ganador (redirige a botones ganador)
+- Pelea cerrada con ganador se puede reabrir → limpia resultados
+- Eliminar pelea → limpia apuestas de jugadores y ajusta peleaActual
+- Nueva persona en modal → se registra automáticamente como jugador
+- Apuesta con saldo negativo → se permite pero deja registro de quién
+  autorizó + alerta visible en confirmación
+- Máximo 300 registros en bitácora
+- logout → sessionStorage.removeItem + redirect a index.html
+- Login checkea sessionStorage → auto-redirect si ya hay sesión
+
+16. ARCHIVOS HTML (SHELLS)
+---------------------------
+admin/index.html:
+  - Sidebar: avatar, búsqueda, lista jugadores, logout, slogan
+  - Topbar: avatar + nombre, brand
+  - Contenido: 6 tabs (dashboard, fichas, peleas, diario, semanal, bitácora)
+  - Incluye shared.css, admin.css, shared.js, admin.js, jsPDF CDN
+
+empleado/index.html:
+  - Sidebar: avatar, nombre, brand, logout
+  - Topbar: avatar + nombre, brand, mobile selector, logout btn
+  - Contenido: 1 tab (peleas) + modal apostador
+  - Bottom nav: Peleas + Salir
+  - Incluye shared.css, empleado.css, shared.js, empleado.js
+
+index.html (login):
+  - SVG rooster minimalista, "Gallo Gold Bruno's", "Acceso al Sistema"
+  - Campos usuario/contraseña, botón "Entrar"
+  - Login inline (no usa shared.js)
+  - Auto-redirect si ya hay sesión guardada
+  - Animación fadeIn en .lw
+
+================================================================================
+  FIN DEL DOCUMENTO
+================================================================================
