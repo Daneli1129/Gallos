@@ -29,7 +29,7 @@ const TABS_ADMIN = [
 ];
 
 // ── INIT ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const u = currentUser || { nombre: 'Admin', rol: 'admin' };
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
@@ -38,8 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   buildNav();
   buildMobNav();
-  renderJugList(jugadores);
-  getPelea(peleaActual);
+
+  if (window.supabase && supabase) {
+    await refreshData();
+    initRealtime();
+  } else {
+    renderJugList(jugadores);
+    getPelea(peleaActual);
+  }
+  
   setTab('peleas');
 });
 
@@ -392,12 +399,25 @@ function renderFicha() {
     </div>`;
 }
 
-function updSaldoAnt(id, val) {
+async function updSaldoAnt(id, val) {
   const j = jugadores.find(x => x.id === id);
   if (!j) return;
-  j.saldoAnt = parseFloat(val) || 0;
-  renderFicha();
-  renderJugList(jugadores);
+  const numericVal = parseFloat(val) || 0;
+
+  if (window.supabase && supabase) {
+    const { error } = await supabase
+      .from('jugadores')
+      .update({ saldo_anterior: numericVal })
+      .eq('id', id);
+    if (error) {
+      toast(`⚠️ Error al actualizar saldo anterior: ${error.message}`, 'error');
+      return;
+    }
+  } else {
+    j.saldoAnt = numericVal;
+  }
+
+  await refreshData();
   toast(`Saldo anterior de <strong>${j.nombre}</strong> actualizado`, 'success');
 }
 
@@ -558,7 +578,7 @@ async function confirmEliminarPelea(pN) {
   if (!p) return;
   const ok = await showConfirm(`¿Eliminar <strong>Pelea #${pN}</strong>?<br><span style="font-size:12px;color:var(--text3);">Se borrarán todas las apuestas asociadas. Esta acción no se puede deshacer.</span>`, '🗑️', 'Eliminar', 'danger');
   if (!ok) return;
-  eliminarPelea(pN);
+  await eliminarPelea(pN);
   renderPeleas();
 }
 

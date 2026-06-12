@@ -14,7 +14,7 @@ const TABS_EMP = [
 ];
 
 // ── INIT ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const u = currentUser || { nombre: 'Empleado', rol: 'empleado' };
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
@@ -23,7 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   buildNav();
   buildMobNav();
-  getPelea(peleaActual);
+
+  if (window.supabase && supabase) {
+    await refreshData();
+    initRealtime();
+  } else {
+    getPelea(peleaActual);
+  }
   setTab('peleas');
 });
 
@@ -281,37 +287,75 @@ function buildPB(p) {
   return div;
 }
 
-function elimDePelea(pN, apId) {
+async function elimDePelea(pN, apId) {
   const p  = getPelea(pN);
   const ap = p.apuestas.find(a => a.id === apId);
-  if (ap?.jugadorId) {
-    const j = jugadores.find(x => x.id === ap.jugadorId);
-    if (j) j.apuestas = j.apuestas.filter(a => a.id !== apId);
+
+  if (window.supabase && supabase) {
+    const { error } = await supabase.from('apuestas').delete().eq('id', apId);
+    if (error) {
+      toast(`⚠️ Error al eliminar apuesta: ${error.message}`, 'error');
+      return;
+    }
+  } else {
+    if (ap?.jugadorId) {
+      const j = jugadores.find(x => x.id === ap.jugadorId);
+      if (j) j.apuestas = j.apuestas.filter(a => a.id !== apId);
+    }
+    p.apuestas = p.apuestas.filter(a => a.id !== apId);
   }
-  logAction('eliminar', `Apuesta de <strong>${ap?.nombre || 'participante'}</strong> eliminada de Pelea #${pN}`, '🗑️');
-  p.apuestas = p.apuestas.filter(a => a.id !== apId);
-  renderPeleas();
+
+  await logAction('eliminar', `Apuesta de <strong>${ap?.nombre || 'participante'}</strong> eliminada de Pelea #${pN}`, '🗑️');
+  await refreshData();
 }
 
 async function ganarPelea(pN, ganador) {
   const ok = await showConfirm(`¿<strong>${ganador === 'verde' ? '🟢 Verde' : '🔴 Rojo'}</strong> gana en Pelea #<strong>${pN}</strong>?`, '🏆');
   if (!ok) return;
-  const p = getPelea(pN);
-  p.estado   = 'cerrada';
-  p.ganador  = ganador;
-  p.minimizada = true;
 
-  p.apuestas.forEach(ap => {
-    ap.resultado = ap.bando === ganador ? 'ganada' : 'perdida';
-    if (ap.jugadorId) {
-      const j   = jugadores.find(x => x.id === ap.jugadorId);
-      const apJ = j?.apuestas.find(a => a.id === ap.id);
-      if (apJ) apJ.resultado = ap.resultado;
+  if (window.supabase && supabase) {
+    const { data: peleaDb } = await supabase
+      .from('peleas')
+      .select('id')
+      .eq('numero_pelea', pN)
+      .single();
+
+    if (peleaDb) {
+      await supabase
+        .from('peleas')
+        .update({ estado: 'cerrada', ganador: ganador, minimizada: true })
+        .eq('id', peleaDb.id);
+
+      await supabase
+        .from('apuestas')
+        .update({ resultado: 'ganada' })
+        .eq('pelea_id', peleaDb.id)
+        .eq('bando', ganador);
+
+      await supabase
+        .from('apuestas')
+        .update({ resultado: 'perdida' })
+        .eq('pelea_id', peleaDb.id)
+        .neq('bando', ganador);
     }
-  });
+  } else {
+    const p = getPelea(pN);
+    p.estado   = 'cerrada';
+    p.ganador  = ganador;
+    p.minimizada = true;
 
-  logAction('resultado', `Pelea #${pN} cerrada — Ganó <strong>${ganador === 'verde' ? '🟢 Verde' : '🔴 Rojo'}</strong>`, '🏆');
-  renderPeleas();
+    p.apuestas.forEach(ap => {
+      ap.resultado = ap.bando === ganador ? 'ganada' : 'perdida';
+      if (ap.jugadorId) {
+        const j   = jugadores.find(x => x.id === ap.jugadorId);
+        const apJ = j?.apuestas.find(a => a.id === ap.id);
+        if (apJ) apJ.resultado = ap.resultado;
+      }
+    });
+  }
+
+  await logAction('resultado', `Pelea #${pN} cerrada — Ganó <strong>${ganador === 'verde' ? '🟢 Verde' : '🔴 Rojo'}</strong>`, '🏆');
+  await refreshData();
   toast(`🏆 <strong>Pelea #${pN}</strong> — Ganó ${ganador === 'verde' ? '🟢 Verde' : '🔴 Rojo'}`, 'success');
 }
 
@@ -319,38 +363,51 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
   const p = getPelea(pN);
   if (!p || p.estado === nuevoEstado) return;
 
-  // Reabrir pelea cerrada (limpia resultados)
   if (p.estado === 'cerrada' && nuevoEstado !== 'cerrada') {
     const ok = await showConfirm(`¿Reabrir <strong>Pelea #${pN}</strong>?<br>Se eliminarán los resultados actuales.`, '🔄');
     if (!ok) return;
-    p.ganador = undefined;
-    p.apuestas.forEach(a => {
-      a.resultado = 'pendiente';
-      if (a.jugadorId) {
-        const j = jugadores.find(x => x.id === a.jugadorId);
-        if (j) {
-          const apJ = j.apuestas.find(ja => ja.id === a.id);
-          if (apJ) apJ.resultado = 'pendiente';
-        }
+
+    if (window.supabase && supabase) {
+      const { data: peleaDb } = await supabase.from('peleas').select('id').eq('numero_pelea', pN).single();
+      if (peleaDb) {
+        await supabase.from('peleas').update({ estado: nuevoEstado, ganador: null }).eq('id', peleaDb.id);
+        await supabase.from('apuestas').update({ resultado: 'pendiente' }).eq('pelea_id', peleaDb.id);
       }
-    });
-  }
+    } else {
+      p.ganador = undefined;
+      p.apuestas.forEach(a => {
+        a.resultado = 'pendiente';
+        if (a.jugadorId) {
+          const j = jugadores.find(x => x.id === a.jugadorId);
+          if (j) {
+            const apJ = j.apuestas.find(ja => ja.id === a.id);
+            if (apJ) apJ.resultado = 'pendiente';
+          }
+        }
+      });
+    }
+  } else {
+    if (nuevoEstado === 'cerrada') {
+      toast('Selecciona 🏆 <strong>Verde</strong> o 🏆 <strong>Rojo</strong> para cerrar la pelea', 'info');
+      return;
+    }
 
-  // Cerrar sin ganador → no permitir (usar botones de ganador)
-  if (nuevoEstado === 'cerrada' && p.estado !== 'cerrada') {
-    toast('Selecciona 🏆 <strong>Verde</strong> o 🏆 <strong>Rojo</strong> para cerrar la pelea', 'info');
-    return;
+    if (window.supabase && supabase) {
+      const { data: peleaDb } = await supabase.from('peleas').select('id').eq('numero_pelea', pN).single();
+      if (peleaDb) {
+        await supabase.from('peleas').update({ estado: nuevoEstado }).eq('id', peleaDb.id);
+      }
+    } else {
+      p.estado = nuevoEstado;
+    }
   }
-
-  p.estado = nuevoEstado;
-  p.minimizada = nuevoEstado === 'cerrada';
 
   const labels = { espera: '⏸ Espera', activa: '⚡ Activa', cerrada: '🛑 Cerrada' };
-  logAction('estado', `Pelea #${pN} → <strong>${labels[nuevoEstado]}</strong>`, '⚡');
+  await logAction('estado', `Pelea #${pN} → <strong>${labels[nuevoEstado]}</strong>`, '⚡');
 
   if (pN === peleaActual) estadoPelea = nuevoEstado;
 
-  renderPeleas();
+  await refreshData();
   toast(`<strong>P#${pN}</strong> ${labels[nuevoEstado]}`, 'success');
 }
 
@@ -359,18 +416,34 @@ async function confirmEliminarPelea(pN) {
   if (!p) return;
   const ok = await showConfirm(`¿Eliminar <strong>Pelea #${pN}</strong>?<br><span style="font-size:12px;color:var(--text3);">Se borrarán todas las apuestas asociadas. Esta acción no se puede deshacer.</span>`, '🗑️', 'Eliminar', 'danger');
   if (!ok) return;
-  eliminarPelea(pN);
+  await eliminarPelea(pN);
   renderPeleas();
 }
 
-function nuevaPelea() {
-  peleaActual++;
-  estadoPelea = 'espera';
-  getPelea(peleaActual);
+async function nuevaPelea() {
+  const nextNum = peleas.length > 0 ? Math.max(...peleas.map(p => p.num)) + 1 : 1;
+
+  if (window.supabase && supabase) {
+    const { error } = await supabase.from('peleas').insert({
+      numero_pelea: nextNum,
+      estado: 'espera',
+      ganador: null,
+      minimizada: false
+    });
+    if (error) {
+      toast(`⚠️ Error al crear pelea: ${error.message}`, 'error');
+      return;
+    }
+  } else {
+    peleaActual = nextNum;
+    estadoPelea = 'espera';
+    getPelea(peleaActual);
+  }
+
   peleaFilter = 'todas';
-  logAction('nueva-pelea', `Nueva Pelea #${peleaActual} creada`, '🐓');
-  renderPeleas();
-  toast(`🐓 <strong>Pelea #${peleaActual}</strong> creada`);
+  await logAction('nueva-pelea', `Nueva Pelea #${nextNum} creada`, '🐓');
+  await refreshData();
+  toast(`🐓 <strong>Pelea #${nextNum}</strong> creada`);
 }
 
 // ── MODAL APOSTADOR ───────────────────────────────────────
@@ -671,7 +744,7 @@ function otroChange(v) {
 }
 
 // ── Confirmar y guardar apuesta ───────────────────────────
-function modalConfirm() {
+async function modalConfirm() {
   const m   = _modal;
   let jId   = m.jugadorId;
 
@@ -683,41 +756,83 @@ function modalConfirm() {
     } else {
       const nc  = COLORS[jugadores.length % COLORS.length];
       const nid = m.nombre.replace(/\s+/g,'').substring(0,2).toUpperCase() + (jugadores.length + 1);
-      const nj  = {
-        id: nid, nombre: m.nombre, color: nc,
-        saldoAnt: 0, apuestas: [],
-        addedBy: currentUser.nombre,
-        addedAt: new Date()
-      };
-      jugadores.push(nj);
+
+      if (window.supabase && supabase) {
+        const { error } = await supabase.from('jugadores').insert({
+          id: nid,
+          nombre: m.nombre,
+          color: nc,
+          saldo_anterior: 0.00,
+          registrado_por: currentUser ? currentUser.id : null
+        });
+        if (error) {
+          toast(`⚠️ Error al registrar jugador: ${error.message}`, 'error');
+          return;
+        }
+      } else {
+        const nj  = {
+          id: nid, nombre: m.nombre, color: nc,
+          saldoAnt: 0, apuestas: [],
+          addedBy: currentUser.nombre,
+          addedAt: new Date()
+        };
+        jugadores.push(nj);
+      }
+
       jId = nid;
-      logAction('nuevo-jugador', `✨ <strong>${m.nombre}</strong> registrado como nuevo jugador`, '✨');
+      await logAction('nuevo-jugador', `✨ <strong>${m.nombre}</strong> registrado como nuevo jugador`, '✨');
     }
   }
 
-  const j        = jugadores.find(x => x.id === jId);
-  const prevSaldo = calcFicha(j).saldo;
+  const j         = jugadores.find(x => x.id === jId);
+  const prevSaldo = j ? calcFicha(j).saldo : 0;
+  const isSaldoNeg = prevSaldo < 0;
 
   // Crear apuesta
   const id = Date.now().toString();
-  const ap = { id, pelea: m.peleaNum, monto: m.monto, bando: m.bando, resultado: 'pendiente' };
-  j.apuestas.push(ap);
-  addApuestaToPelea(m.peleaNum, { jugadorId: jId, nombre: j.nombre, bando: m.bando, monto: m.monto, id, resultado: 'pendiente' });
+
+  if (window.supabase && supabase) {
+    // Buscar id de pelea de la BD
+    const { data: peleaDb } = await supabase.from('peleas').select('id').eq('numero_pelea', m.peleaNum).single();
+    if (!peleaDb) {
+      toast(`⚠️ Pelea #${m.peleaNum} no encontrada.`, 'error');
+      return;
+    }
+
+    const { error } = await supabase.from('apuestas').insert({
+      id: id,
+      pelea_id: peleaDb.id,
+      jugador_id: jId,
+      bando: m.bando,
+      monto: m.monto,
+      resultado: 'pendiente',
+      autorizado_por: isSaldoNeg && currentUser ? currentUser.id : null
+    });
+
+    if (error) {
+      toast(`⚠️ Error al guardar apuesta: ${error.message}`, 'error');
+      return;
+    }
+  } else {
+    const ap = { id, pelea: m.peleaNum, monto: m.monto, bando: m.bando, resultado: 'pendiente' };
+    j.apuestas.push(ap);
+    addApuestaToPelea(m.peleaNum, { jugadorId: jId, nombre: j.nombre, bando: m.bando, monto: m.monto, id, resultado: 'pendiente' });
+  }
 
   // Log saldo negativo
-  if (prevSaldo < 0) {
-    logAction('saldo-negativo',
-      `⚠️ Apuesta autorizada con saldo negativo (${fmt(Math.abs(prevSaldo))}) — <strong>${j.nombre}</strong> · Autorizado por <strong>${currentUser.nombre}</strong> · ${nowStr()}`,
+  if (isSaldoNeg) {
+    await logAction('saldo-negativo',
+      `⚠️ Apuesta autorizada con saldo negativo (${fmt(Math.abs(prevSaldo))}) — <strong>${j ? j.nombre : m.nombre}</strong> · Autorizado por <strong>${currentUser.nombre}</strong> · ${nowStr()}`,
       '⚠️');
   }
 
-  logAction('apuesta',
-    `<strong>${j.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? '🟢 Verde' : '🔴 Rojo'} · Pelea #${m.peleaNum}`,
+  await logAction('apuesta',
+    `<strong>${j ? j.nombre : m.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? '🟢 Verde' : '🔴 Rojo'} · Pelea #${m.peleaNum}`,
     '💰');
 
   closeModal();
-  renderPeleas();
-  toast(`<strong>${j.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? '🟢' : '🔴'} · P${m.peleaNum}`, 'success');
+  await refreshData();
+  toast(`<strong>${j ? j.nombre : m.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? '🟢' : '🔴'} · P${m.peleaNum}`, 'success');
 }
 
 // ── KEYBOARD SHORTCUTS ────────────────────────────────────

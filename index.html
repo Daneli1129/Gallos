@@ -6,6 +6,7 @@
 <title>Gallo Gold — Bruno's</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* ── MEJORAS RESPONSIVAS PARA EL LOGIN ── */
   html, body {
@@ -91,20 +92,50 @@
 </div>
 
 <script>
-// ── USUARIOS ──────────────────────────────────────────────
-const USERS = [
-  { usuario: 'admin',     pass: 'admin', nombre: 'Bruno García',   rol: 'admin' },
-  { usuario: 'empleado',  pass: '123',   nombre: 'María Ramírez',  rol: 'empleado' },
-  { usuario: 'empleado2', pass: '456',   nombre: 'Carlos Mendoza', rol: 'empleado' },
-];
+// ── CONFIGURACIÓN DE CONEXIÓN SUPABASE ─────────────────────
+const DEFAULT_URL = 'https://nqrpruvszwocvlrjsuwr.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
 
-// ── LOGIN ──────────────────────────────────────────────────
-function doLogin() {
-  const u     = document.getElementById('li-u').value.trim();
-  const p     = document.getElementById('li-p').value;
-  const found = USERS.find(x => x.usuario === u && x.pass === p);
+let supabaseUrl = localStorage.getItem('supabaseUrl') || DEFAULT_URL;
+let supabaseKey = localStorage.getItem('supabaseKey') || DEFAULT_KEY;
 
-  if (!found) {
+if ((supabaseUrl === DEFAULT_URL || supabaseKey === DEFAULT_KEY) && !localStorage.getItem('supabaseConfigured')) {
+  const promptUrl = prompt("Por favor ingresa la URL de tu proyecto Supabase (ej: https://xxxx.supabase.co):", "");
+  const promptKey = prompt("Por favor ingresa la anon/public key de tu proyecto Supabase:", "");
+  if (promptUrl && promptKey) {
+    supabaseUrl = promptUrl.trim();
+    supabaseKey = promptKey.trim();
+    localStorage.setItem('supabaseUrl', supabaseUrl);
+    localStorage.setItem('supabaseKey', supabaseKey);
+    localStorage.setItem('supabaseConfigured', 'true');
+  }
+}
+
+let supabase = null;
+if (supabaseUrl && supabaseUrl !== DEFAULT_URL && supabaseKey && supabaseKey !== DEFAULT_KEY) {
+  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+} else {
+  console.error("Supabase no inicializado en el Login.");
+}
+
+// ── LOGIN ASÍNCRONO ─────────────────────────────────────────
+async function doLogin() {
+  const u = document.getElementById('li-u').value.trim();
+  const p = document.getElementById('li-p').value;
+
+  if (!supabase) {
+    alert("Supabase no está configurado.");
+    return;
+  }
+
+  const { data: user, error } = await supabase
+    .from('usuarios')
+    .select('*')
+    .eq('username', u)
+    .eq('password_hash', p)
+    .maybeSingle();
+
+  if (error || !user) {
     document.getElementById('l-err').classList.add('show');
     document.getElementById('li-p').value = '';
     return;
@@ -112,11 +143,24 @@ function doLogin() {
 
   document.getElementById('l-err').classList.remove('show');
 
+  const sessionUser = {
+    id: user.id,
+    usuario: user.username,
+    nombre: user.nombre_completo,
+    rol: user.rol
+  };
+
   // Guardar sesión en sessionStorage
-  sessionStorage.setItem('currentUser', JSON.stringify(found));
+  sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
+
+  // Registrar conexión en la base de datos
+  await supabase
+    .from('usuarios')
+    .update({ esta_conectado: true, ultimo_acceso: new Date().toISOString() })
+    .eq('id', user.id);
 
   // Redirigir según rol
-  if (found.rol === 'admin') {
+  if (user.rol === 'admin') {
     window.location.href = 'admin/index.html';
   } else {
     window.location.href = 'empleado/index.html';
