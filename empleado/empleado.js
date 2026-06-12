@@ -24,12 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildNav();
   buildMobNav();
 
-  if (window.supabase && supabase) {
-    await refreshData();
-    initRealtime();
-  } else {
-    getPelea(peleaActual);
-  }
+  await refreshData();
+  initRealtime();
   setTab('peleas');
 });
 
@@ -147,7 +143,7 @@ function toggleMin(num) {
 }
 
 function buildPB(p) {
-  if (p.minimizada === undefined) p.minimizada = p.estado !== 'activa';
+  if (p.minimizada === undefined) p.minimizada = false;
 
   const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
@@ -291,18 +287,10 @@ async function elimDePelea(pN, apId) {
   const p  = getPelea(pN);
   const ap = p.apuestas.find(a => a.id === apId);
 
-  if (window.supabase && supabase) {
-    const { error } = await supabase.from('apuestas').delete().eq('id', apId);
-    if (error) {
-      toast(`⚠️ Error al eliminar apuesta: ${error.message}`, 'error');
-      return;
-    }
-  } else {
-    if (ap?.jugadorId) {
-      const j = jugadores.find(x => x.id === ap.jugadorId);
-      if (j) j.apuestas = j.apuestas.filter(a => a.id !== apId);
-    }
-    p.apuestas = p.apuestas.filter(a => a.id !== apId);
+  const { error } = await sb.from('apuestas').delete().eq('id', apId);
+  if (error) {
+    toast(`⚠️ Error al eliminar apuesta: ${error.message}`, 'error');
+    return;
   }
 
   await logAction('eliminar', `Apuesta de <strong>${ap?.nombre || 'participante'}</strong> eliminada de Pelea #${pN}`, '🗑️');
@@ -313,45 +301,29 @@ async function ganarPelea(pN, ganador) {
   const ok = await showConfirm(`¿<strong>${ganador === 'verde' ? '🟢 Verde' : '🔴 Rojo'}</strong> gana en Pelea #<strong>${pN}</strong>?`, '🏆');
   if (!ok) return;
 
-  if (window.supabase && supabase) {
-    const { data: peleaDb } = await supabase
-      .from('peleas')
-      .select('id')
-      .eq('numero_pelea', pN)
-      .single();
+  const { data: peleaDb } = await sb
+    .from('peleas')
+    .select('id')
+    .eq('numero_pelea', pN)
+    .single();
 
-    if (peleaDb) {
-      await supabase
+  if (peleaDb) {
+      await sb
         .from('peleas')
-        .update({ estado: 'cerrada', ganador: ganador, minimizada: true })
+        .update({ estado: 'cerrada', ganador: ganador })
         .eq('id', peleaDb.id);
 
-      await supabase
-        .from('apuestas')
-        .update({ resultado: 'ganada' })
-        .eq('pelea_id', peleaDb.id)
-        .eq('bando', ganador);
+    await sb
+      .from('apuestas')
+      .update({ resultado: 'ganada' })
+      .eq('pelea_id', peleaDb.id)
+      .eq('bando', ganador);
 
-      await supabase
-        .from('apuestas')
-        .update({ resultado: 'perdida' })
-        .eq('pelea_id', peleaDb.id)
-        .neq('bando', ganador);
-    }
-  } else {
-    const p = getPelea(pN);
-    p.estado   = 'cerrada';
-    p.ganador  = ganador;
-    p.minimizada = true;
-
-    p.apuestas.forEach(ap => {
-      ap.resultado = ap.bando === ganador ? 'ganada' : 'perdida';
-      if (ap.jugadorId) {
-        const j   = jugadores.find(x => x.id === ap.jugadorId);
-        const apJ = j?.apuestas.find(a => a.id === ap.id);
-        if (apJ) apJ.resultado = ap.resultado;
-      }
-    });
+    await sb
+      .from('apuestas')
+      .update({ resultado: 'perdida' })
+      .eq('pelea_id', peleaDb.id)
+      .neq('bando', ganador);
   }
 
   await logAction('resultado', `Pelea #${pN} cerrada — Ganó <strong>${ganador === 'verde' ? '🟢 Verde' : '🔴 Rojo'}</strong>`, '🏆');
@@ -367,24 +339,10 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
     const ok = await showConfirm(`¿Reabrir <strong>Pelea #${pN}</strong>?<br>Se eliminarán los resultados actuales.`, '🔄');
     if (!ok) return;
 
-    if (window.supabase && supabase) {
-      const { data: peleaDb } = await supabase.from('peleas').select('id').eq('numero_pelea', pN).single();
-      if (peleaDb) {
-        await supabase.from('peleas').update({ estado: nuevoEstado, ganador: null }).eq('id', peleaDb.id);
-        await supabase.from('apuestas').update({ resultado: 'pendiente' }).eq('pelea_id', peleaDb.id);
-      }
-    } else {
-      p.ganador = undefined;
-      p.apuestas.forEach(a => {
-        a.resultado = 'pendiente';
-        if (a.jugadorId) {
-          const j = jugadores.find(x => x.id === a.jugadorId);
-          if (j) {
-            const apJ = j.apuestas.find(ja => ja.id === a.id);
-            if (apJ) apJ.resultado = 'pendiente';
-          }
-        }
-      });
+    const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', pN).single();
+    if (peleaDb) {
+      await sb.from('peleas').update({ estado: nuevoEstado, ganador: null }).eq('id', peleaDb.id);
+      await sb.from('apuestas').update({ resultado: 'pendiente' }).eq('pelea_id', peleaDb.id);
     }
   } else {
     if (nuevoEstado === 'cerrada') {
@@ -392,13 +350,9 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
       return;
     }
 
-    if (window.supabase && supabase) {
-      const { data: peleaDb } = await supabase.from('peleas').select('id').eq('numero_pelea', pN).single();
-      if (peleaDb) {
-        await supabase.from('peleas').update({ estado: nuevoEstado }).eq('id', peleaDb.id);
-      }
-    } else {
-      p.estado = nuevoEstado;
+    const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', pN).single();
+    if (peleaDb) {
+      await sb.from('peleas').update({ estado: nuevoEstado }).eq('id', peleaDb.id);
     }
   }
 
@@ -423,21 +377,14 @@ async function confirmEliminarPelea(pN) {
 async function nuevaPelea() {
   const nextNum = peleas.length > 0 ? Math.max(...peleas.map(p => p.num)) + 1 : 1;
 
-  if (window.supabase && supabase) {
-    const { error } = await supabase.from('peleas').insert({
-      numero_pelea: nextNum,
-      estado: 'espera',
-      ganador: null,
-      minimizada: false
-    });
-    if (error) {
-      toast(`⚠️ Error al crear pelea: ${error.message}`, 'error');
-      return;
-    }
-  } else {
-    peleaActual = nextNum;
-    estadoPelea = 'espera';
-    getPelea(peleaActual);
+  const { error } = await sb.from('peleas').insert({
+    numero_pelea: nextNum,
+    estado: 'espera',
+    ganador: null
+  });
+  if (error) {
+    toast(`⚠️ Error al crear pelea: ${error.message}`, 'error');
+    return;
   }
 
   peleaFilter = 'todas';
@@ -757,26 +704,16 @@ async function modalConfirm() {
       const nc  = COLORS[jugadores.length % COLORS.length];
       const nid = m.nombre.replace(/\s+/g,'').substring(0,2).toUpperCase() + (jugadores.length + 1);
 
-      if (window.supabase && supabase) {
-        const { error } = await supabase.from('jugadores').insert({
-          id: nid,
-          nombre: m.nombre,
-          color: nc,
-          saldo_anterior: 0.00,
-          registrado_por: currentUser ? currentUser.id : null
-        });
-        if (error) {
-          toast(`⚠️ Error al registrar jugador: ${error.message}`, 'error');
-          return;
-        }
-      } else {
-        const nj  = {
-          id: nid, nombre: m.nombre, color: nc,
-          saldoAnt: 0, apuestas: [],
-          addedBy: currentUser.nombre,
-          addedAt: new Date()
-        };
-        jugadores.push(nj);
+      const { error } = await sb.from('jugadores').insert({
+        id: nid,
+        nombre: m.nombre,
+        color: nc,
+        saldo_anterior: 0.00,
+        registrado_por: currentUser ? currentUser.id : null
+      });
+      if (error) {
+        toast(`⚠️ Error al registrar jugador: ${error.message}`, 'error');
+        return;
       }
 
       jId = nid;
@@ -791,32 +728,25 @@ async function modalConfirm() {
   // Crear apuesta
   const id = Date.now().toString();
 
-  if (window.supabase && supabase) {
-    // Buscar id de pelea de la BD
-    const { data: peleaDb } = await supabase.from('peleas').select('id').eq('numero_pelea', m.peleaNum).single();
-    if (!peleaDb) {
-      toast(`⚠️ Pelea #${m.peleaNum} no encontrada.`, 'error');
-      return;
-    }
+  const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', m.peleaNum).single();
+  if (!peleaDb) {
+    toast(`⚠️ Pelea #${m.peleaNum} no encontrada.`, 'error');
+    return;
+  }
 
-    const { error } = await supabase.from('apuestas').insert({
-      id: id,
-      pelea_id: peleaDb.id,
-      jugador_id: jId,
-      bando: m.bando,
-      monto: m.monto,
-      resultado: 'pendiente',
-      autorizado_por: isSaldoNeg && currentUser ? currentUser.id : null
-    });
+  const { error } = await sb.from('apuestas').insert({
+    id: id,
+    pelea_id: peleaDb.id,
+    jugador_id: jId,
+    bando: m.bando,
+    monto: m.monto,
+    resultado: 'pendiente',
+    autorizado_por: isSaldoNeg && currentUser ? currentUser.id : null
+  });
 
-    if (error) {
-      toast(`⚠️ Error al guardar apuesta: ${error.message}`, 'error');
-      return;
-    }
-  } else {
-    const ap = { id, pelea: m.peleaNum, monto: m.monto, bando: m.bando, resultado: 'pendiente' };
-    j.apuestas.push(ap);
-    addApuestaToPelea(m.peleaNum, { jugadorId: jId, nombre: j.nombre, bando: m.bando, monto: m.monto, id, resultado: 'pendiente' });
+  if (error) {
+    toast(`⚠️ Error al guardar apuesta: ${error.message}`, 'error');
+    return;
   }
 
   // Log saldo negativo

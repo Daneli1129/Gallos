@@ -4,32 +4,10 @@
 // ============================================================
 
 // ── CONEXIÓN SUPABASE ──────────────────────────────────────
-const DEFAULT_URL = 'https://nqrprvaszwocvlrjsuwr.supabase.co';
-const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
+const SUPABASE_URL = 'https://nqrprvaszwocvlrjsuwr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
 
-let supabaseUrl = localStorage.getItem('supabaseUrl') || DEFAULT_URL;
-let supabaseKey = localStorage.getItem('supabaseKey') || DEFAULT_KEY;
-
-// Si no están configuradas las credenciales de conexión reales, las solicitamos en local
-if ((supabaseUrl === DEFAULT_URL || supabaseKey === DEFAULT_KEY) && !localStorage.getItem('supabaseConfigured')) {
-  const promptUrl = prompt("Por favor ingresa la URL de tu proyecto Supabase (ej: https://xxxx.supabase.co):", "");
-  const promptKey = prompt("Por favor ingresa la anon/public key de tu proyecto Supabase:", "");
-  if (promptUrl && promptKey) {
-    supabaseUrl = promptUrl.trim();
-    supabaseKey = promptKey.trim();
-    localStorage.setItem('supabaseUrl', supabaseUrl);
-    localStorage.setItem('supabaseKey', supabaseKey);
-    localStorage.setItem('supabaseConfigured', 'true');
-  }
-}
-
-// Inicializar cliente
-let supabase = null;
-if (supabaseUrl && supabaseUrl !== DEFAULT_URL && supabaseKey && supabaseKey !== DEFAULT_KEY) {
-  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-} else {
-  console.error("Supabase no se ha inicializado. Configura tus credenciales en shared.js o ingresalas cuando se soliciten.");
-}
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Registro de sesiones de empleados (en memoria)
 const empSessions = {};
@@ -92,8 +70,7 @@ const fmtTime = d =>
 // ── CONSULTAS DE LECTURA SUPABASE ─────────────────────────
 
 async function fetchJugadores() {
-  if (!supabase) return;
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('jugadores')
     .select(`
             id,
@@ -130,8 +107,7 @@ async function fetchJugadores() {
 }
 
 async function fetchPeleas() {
-  if (!supabase) return;
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('peleas')
     .select(`
             id,
@@ -170,8 +146,7 @@ async function fetchPeleas() {
 }
 
 async function fetchBitacora() {
-  if (!supabase) return;
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('bitacora')
     .select(`
             tipo,
@@ -240,8 +215,7 @@ async function refreshData() {
 }
 
 function initRealtime() {
-  if (!supabase) return;
-  supabase
+  sb
     .channel('schema-db-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'peleas' }, () => refreshData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'apuestas' }, () => refreshData())
@@ -256,12 +230,7 @@ async function doLogin() {
   const u = document.getElementById('li-u').value.trim();
   const p = document.getElementById('li-p').value;
 
-  if (!supabase) {
-    alert("Supabase no está configurado.");
-    return;
-  }
-
-  const { data: user, error } = await supabase
+  const { data: user, error } = await sb
     .from('usuarios')
     .select('*')
     .eq('username', u)
@@ -287,7 +256,7 @@ async function doLogin() {
   sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
 
   // Registrar inicio de sesión en BD
-  await supabase
+  await sb
     .from('usuarios')
     .update({ esta_conectado: true, ultimo_acceso: new Date().toISOString() })
     .eq('id', user.id);
@@ -301,9 +270,8 @@ async function doLogin() {
 }
 
 async function doLogout() {
-  if (currentUser && supabase) {
-    // Actualizar estado en BD
-    await supabase
+  if (currentUser) {
+    await sb
       .from('usuarios')
       .update({ esta_conectado: false })
       .eq('id', currentUser.id);
@@ -332,12 +300,11 @@ function initNav() {
 
 // ── ELIMINAR PELEA ──────────────────────────────────────────
 async function eliminarPelea(num) {
-  if (!supabase) return;
-  const { data: pelea } = await supabase.from('peleas').select('id').eq('numero_pelea', num).single();
+  const { data: pelea } = await sb.from('peleas').select('id').eq('numero_pelea', num).single();
   if (!pelea) return;
   const nombrePelea = `Pelea #${num}`;
 
-  const { error } = await supabase.from('peleas').delete().eq('id', pelea.id);
+  const { error } = await sb.from('peleas').delete().eq('id', pelea.id);
   if (error) {
     toast(`⚠️ Error al eliminar ${nombrePelea}: ${error.message}`, 'error');
     return;
@@ -384,8 +351,8 @@ function calcFicha(j) {
  * Agrega un evento a la bitácora en Supabase.
  */
 async function logAction(tipo, msg, icon = '🎯') {
-  if (!supabase || !currentUser) return;
-  const { error } = await supabase.from('bitacora').insert({
+  if (!currentUser) return;
+  const { error } = await sb.from('bitacora').insert({
     tipo,
     mensaje: msg,
     icon,

@@ -6,7 +6,7 @@
 <title>Gallo Gold — Bruno's</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared/shared.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared/supabase.umd.js"></script>
 <style>
   /* ── MEJORAS RESPONSIVAS PARA EL LOGIN ── */
   html, body {
@@ -92,43 +92,18 @@
 </div>
 
 <script>
-// ── CONFIGURACIÓN DE CONEXIÓN SUPABASE ─────────────────────
-const DEFAULT_URL = 'https://nqrpruvszwocvlrjsuwr.supabase.co';
-const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
+// ── CONEXIÓN SUPABASE ──────────────────────────────────────
+const SUPABASE_URL = 'https://nqrprvaszwocvlrjsuwr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
 
-let supabaseUrl = localStorage.getItem('supabaseUrl') || DEFAULT_URL;
-let supabaseKey = localStorage.getItem('supabaseKey') || DEFAULT_KEY;
-
-if ((supabaseUrl === DEFAULT_URL || supabaseKey === DEFAULT_KEY) && !localStorage.getItem('supabaseConfigured')) {
-  const promptUrl = prompt("Por favor ingresa la URL de tu proyecto Supabase (ej: https://xxxx.supabase.co):", "");
-  const promptKey = prompt("Por favor ingresa la anon/public key de tu proyecto Supabase:", "");
-  if (promptUrl && promptKey) {
-    supabaseUrl = promptUrl.trim();
-    supabaseKey = promptKey.trim();
-    localStorage.setItem('supabaseUrl', supabaseUrl);
-    localStorage.setItem('supabaseKey', supabaseKey);
-    localStorage.setItem('supabaseConfigured', 'true');
-  }
-}
-
-let supabase = null;
-if (supabaseUrl && supabaseUrl !== DEFAULT_URL && supabaseKey && supabaseKey !== DEFAULT_KEY) {
-  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-} else {
-  console.error("Supabase no inicializado en el Login.");
-}
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── LOGIN ASÍNCRONO ─────────────────────────────────────────
 async function doLogin() {
   const u = document.getElementById('li-u').value.trim();
   const p = document.getElementById('li-p').value;
 
-  if (!supabase) {
-    alert("Supabase no está configurado.");
-    return;
-  }
-
-  const { data: user, error } = await supabase
+  const { data: user, error } = await sb
     .from('usuarios')
     .select('*')
     .eq('username', u)
@@ -154,7 +129,7 @@ async function doLogin() {
   sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
 
   // Registrar conexión en la base de datos
-  await supabase
+  await sb
     .from('usuarios')
     .update({ esta_conectado: true, ultimo_acceso: new Date().toISOString() })
     .eq('id', user.id);

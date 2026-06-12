@@ -1,0 +1,90 @@
+TRABAJO REALIZADO — 12/JUN/2026
+==================================
+
+PROYECTO: Gallos Gold — Bruno's (Login + Admin + Empleado)
+DESARROLLADOR: Elian (con ayuda de IA)
+
+--------------------------------------------------------------
+1. PROBLEMA: No cargaba el CDN de Supabase ni jsPDF
+--------------------------------------------------------------
+CAUSA: El navegador Edge bloqueaba cdn.jsdelivr.net y cdnjs.cloudflare.com
+       por "Tracking Prevention" (prevención de seguimiento).
+
+SOLUCIÓN:
+- Se descargó @supabase/supabase-js@2 (UMD) a shared/supabase.umd.js
+- Se descargó jspdf 2.5.1 (UMD) a shared/jspdf.umd.min.js
+- Se reemplazaron los script tags CDN en:
+  - index.html          → shared/supabase.umd.js
+  - admin/index.html    → ../shared/supabase.umd.js  (también jspdf)
+  - empleado/index.html → ../shared/supabase.umd.js
+
+--------------------------------------------------------------
+2. PROBLEMA: "Identifier 'supabase' has already been declared"
+--------------------------------------------------------------
+CAUSA: El bundle UMD de Supabase declara var supabase como global,
+       y el inline script también declaraba const supabase, causando
+       conflicto de redeclaración.
+
+SOLUCIÓN:
+- Se renombró la variable del cliente Supabase de supabase a sb
+  en index.html y shared/shared.js para evitar el conflicto.
+  Ejemplo: const sb = window.supabase.createClient(...)
+
+--------------------------------------------------------------
+3. PROBLEMA: Referencias a supabase rotas (variables mal renombradas)
+--------------------------------------------------------------
+CAUSA: Al hacer replaceAll de "supabase." → "sb.", no se alcanzaron
+       los casos donde supabase estaba en una línea y el .from() en
+       la siguiente línea (multilínea). Además, replaceAll global
+       de "supabase" → "sb" dañó la URL (supabase.co → sb.co) y
+       window.supabase → window.sb.
+
+SOLUCIÓN:
+- Se corrigieron manualmente todas las referencias rotas en:
+  - index.html: window.supabase.createClient, sb en doLogin
+  - shared/shared.js: todas las sb (fetchJugadores, fetchPeleas,
+    fetchBitacora, initRealtime, doLogin, doLogout, eliminarPelea,
+    logAction)
+  - admin/admin.js: sb en guardarSaldoAnterior (antes supabase)
+  - empleado/empleado.js: todas las sb en ganarPelea, nuevaPelea,
+    eliminar apuestas, etc.
+
+--------------------------------------------------------------
+4. PROBLEMA: Error 400 al crear pelea (nuevaPelea)
+--------------------------------------------------------------
+CAUSA: El insert incluía "minimizada: false", columna que NO existe
+       en la tabla peleas de Supabase (solo tiene: id, numero_pelea,
+       estado, ganador, created_at, updated_at).
+
+SOLUCIÓN:
+- Se eliminó "minimizada: false" del objeto insert en nuevaPelea()
+  en empleado/empleado.js.
+
+--------------------------------------------------------------
+5. PROBLEMA: Peleas aparecían minimizadas por defecto
+--------------------------------------------------------------
+CAUSA: La función buildPB() tenía:
+         if (p.minimizada === undefined) p.minimizada = p.estado !== 'activa';
+       Esto colapsaba automáticamente las peleas no activas.
+
+SOLUCIÓN:
+- Se cambió a: if (p.minimizada === undefined) p.minimizada = false;
+  en ambos archivos:
+  - empleado/empleado.js (línea 146)
+  - admin/admin.js (línea 469)
+
+--------------------------------------------------------------
+ARCHIVOS MODIFICADOS
+--------------------------------------------------------------
+- index.html
+- admin/index.html
+- empleado/index.html
+- shared/shared.js
+- admin/admin.js
+- empleado/empleado.js
+
+ARCHIVOS NUEVOS
+--------------------------------------------------------------
+- shared/supabase.umd.js   (librería Supabase local)
+- shared/jspdf.umd.min.js  (librería jsPDF local)
+- trabajo_hoy.txt          (este archivo)

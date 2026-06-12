@@ -64,3 +64,46 @@ CREATE TABLE bitacora (
 CREATE INDEX idx_apuestas_pelea ON apuestas(pelea_id);
 CREATE INDEX idx_apuestas_jugador ON apuestas(jugador_id);
 CREATE INDEX idx_bitacora_usuario ON bitacora(usuario_id);
+
+
+-- Permitir a la anon key leer todo (necesario para el login)
+CREATE POLICY "anon_select" ON usuarios FOR SELECT USING (true);
+
+-- Permitir a la anon key actualizar (login/logout)
+CREATE POLICY "anon_update" ON usuarios FOR UPDATE USING (true);
+
+
+-- Políticas para la tabla usuarios
+CREATE POLICY "usuarios_select" ON public.usuarios FOR SELECT USING (true);
+CREATE POLICY "usuarios_update" ON public.usuarios FOR UPDATE USING (true);
+CREATE POLICY "usuarios_insert" ON public.usuarios FOR INSERT WITH CHECK (true);
+CREATE POLICY "usuarios_delete" ON public.usuarios FOR DELETE USING (true);
+
+-- Políticas para jugadores
+CREATE POLICY "jugadores_select" ON public.jugadores FOR SELECT USING (true);
+CREATE POLICY "jugadores_insert" ON public.jugadores FOR INSERT WITH CHECK (true);
+CREATE POLICY "jugadores_update" ON public.jugadores FOR UPDATE USING (true);
+CREATE POLICY "jugadores_delete" ON public.jugadores FOR DELETE USING (true);
+
+-- Políticas para peleas
+CREATE POLICY "peleas_select" ON public.peleas FOR SELECT USING (true);
+CREATE POLICY "peleas_insert" ON public.peleas FOR INSERT WITH CHECK (true);
+CREATE POLICY "peleas_update" ON public.peleas FOR UPDATE USING (true);
+CREATE POLICY "peleas_delete" ON public.peleas FOR DELETE USING (true);
+
+-- Políticas para apuestas
+CREATE POLICY "apuestas_select" ON public.apuestas FOR SELECT USING (true);
+CREATE POLICY "apuestas_insert" ON public.apuestas FOR INSERT WITH CHECK (true);
+CREATE POLICY "apuestas_update" ON public.apuestas FOR UPDATE USING (true);
+CREATE POLICY "apuestas_delete" ON public.apuestas FOR DELETE USING (true);
+
+-- Políticas para bitacora
+CREATE POLICY "bitacora_select" ON public.bitacora FOR SELECT USING (true);
+CREATE POLICY "bitacora_insert" ON public.bitacora FOR INSERT WITH CHECK (true);
+CREATE POLICY "bitacora_update" ON public.bitacora FOR UPDATE USING (true);
+CREATE POLICY "bitacora_delete" ON public.bitacora FOR DELETE USING (true);
+
+
+INSERT INTO usuarios (username, password_hash, nombre_completo, rol) VALUES
+('eliaglz', '&Pu!=BoDk)R$jEeM', 'Elián González', 'admin'),
+('vgonzalez', 'UH_$ok;|z6gq_$', 'Vanessa González', 'empleado');

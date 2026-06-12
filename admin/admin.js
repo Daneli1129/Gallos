@@ -39,13 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   buildNav();
   buildMobNav();
 
-  if (window.supabase && supabase) {
-    await refreshData();
-    initRealtime();
-  } else {
-    renderJugList(jugadores);
-    getPelea(peleaActual);
-  }
+  await refreshData();
+  initRealtime();
   
   setTab('peleas');
 });
@@ -404,17 +399,13 @@ async function updSaldoAnt(id, val) {
   if (!j) return;
   const numericVal = parseFloat(val) || 0;
 
-  if (window.supabase && supabase) {
-    const { error } = await supabase
-      .from('jugadores')
-      .update({ saldo_anterior: numericVal })
-      .eq('id', id);
-    if (error) {
-      toast(`⚠️ Error al actualizar saldo anterior: ${error.message}`, 'error');
-      return;
-    }
-  } else {
-    j.saldoAnt = numericVal;
+  const { error } = await sb
+    .from('jugadores')
+    .update({ saldo_anterior: numericVal })
+    .eq('id', id);
+  if (error) {
+    toast(`⚠️ Error al actualizar saldo anterior: ${error.message}`, 'error');
+    return;
   }
 
   await refreshData();
@@ -475,7 +466,7 @@ function toggleMin(num) {
 }
 
 function buildPB(p) {
-  if (p.minimizada === undefined) p.minimizada = p.estado !== 'activa';
+  if (p.minimizada === undefined) p.minimizada = false;
   const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
   const tR     = rojos.reduce((s, a) => s + a.monto, 0);
