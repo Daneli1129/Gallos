@@ -1,73 +1,232 @@
-// ============================================================
-// shared/shared.js
-// Auth, estado global, utilidades compartidas entre admin y empleado
-// ============================================================
-
-// ── CONEXIÓN SUPABASE ──────────────────────────────────────
 const SUPABASE_URL = 'https://nqrprvaszwocvlrjsuwr.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false
+  }
+});
 
-// Registro de sesiones de empleados (en memoria)
 const empSessions = {};
+let currentUser = null;
+let authReady = false;
+let _authResolve;
+const authReadyPromise = new Promise(r => { _authResolve = r; });
 
-// Usuario activo
-let currentUser = sessionStorage.getItem('currentUser')
-  ? JSON.parse(sessionStorage.getItem('currentUser'))
-  : null;
+async function waitForAuth(timeout = 5000) {
+  if (authReady) return;
+  const timer = setTimeout(() => { if (!authReady) { authReady = true; _authResolve(); } }, timeout);
+  await authReadyPromise;
+  clearTimeout(timer);
+}
+let loginAttempts = 0;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MINUTES = 15;
 
-// ── ESTADO GLOBAL ─────────────────────────────────────────
 const COLORS = [
   '#E8C97A', '#E74C3C', '#2ECC71', '#D4A24A',
   '#7c3aed', '#3AB0FF', '#C9A84C', '#C0392B'
 ];
 
-// Base de jugadores del sistema (se cargará desde Supabase)
 let jugadores = [];
-
-// Peleas activas del día (se cargará desde Supabase)
 let peleas = [];
 let peleaActual = 1;
-let estadoPelea = 'espera';  // 'espera' | 'activa' | 'cerrada'
-
-// Jugador seleccionado (usado en admin/fichas)
+let estadoPelea = 'espera';
 let selectedJugador = null;
-
-// Tab activo
 let currentTab = '';
-
-// Bitácora de movimientos (se cargará desde Supabase)
 let bitacora = [];
 let logFiltro = 'todos';
 
-// ── UTILIDADES ────────────────────────────────────────────
+// ── XSS SANITIZATION ──
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
 
-/** Formatea número como moneda MXN */
+function sanitize(str) {
+  return escapeHtml(str);
+}
+
+// ── CSP (Content Security Policy) ──
+(function injectCSP() {
+  if (document.querySelector('meta[http-equiv="Content-Security-Policy"]')) return;
+  const meta = document.createElement('meta');
+  meta.httpEquiv = 'Content-Security-Policy';
+  meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://nqrprvaszwocvlrjsuwr.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://nqrprvaszwocvlrjsuwr.supabase.co wss://nqrprvaszwocvlrjsuwr.supabase.co; img-src 'self' data:;";
+  document.head.appendChild(meta);
+})();
+
+// ── UTILIDADES ──
 const fmt = n =>
   '$' + Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** Iniciales de un nombre (máximo 2 palabras) */
 const initials = n =>
   n ? n.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() : '??';
 
-/** Hora actual formateada */
 const nowStr = () =>
   new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-/** Fecha larga (ej: lunes, 31 de mayo de 2026) */
 const today = () =>
   new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-/** Fecha corta para nombre de archivo PDF (ej: 31/05/2026) */
 const todayShort = () =>
   new Date().toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
-/** Formatea una fecha como HH:MM */
 const fmtTime = d =>
   d ? d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '—';
 
-// ── CONSULTAS DE LECTURA SUPABASE ─────────────────────────
+// ── SUPABASE AUTH ──
+
+async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await loadUsuarioFromAuth(session.user.id);
+  }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      await loadUsuarioFromAuth(session.user.id);
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      selectedJugador = null;
+    }
+  });
+  authReady = true;
+  _authResolve();
+}
+
+async function loadUsuarioFromAuth(authUserId) {
+  const { data, error } = await sb
+    .from('usuarios')
+    .select('id, username, nombre_completo, rol')
+    .eq('auth_id', authUserId)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('Error loading user profile:', error);
+    currentUser = null;
+    return;
+  }
+
+  currentUser = {
+    id: data.id,
+    usuario: data.username,
+    nombre: data.nombre_completo,
+    rol: data.rol,
+    auth_id: authUserId
+  };
+
+  // Update connected status
+  await sb.from('usuarios').update({
+    esta_conectado: true,
+    ultimo_acceso: new Date().toISOString()
+  }).eq('id', data.id);
+}
+
+async function doLogin() {
+  const u = document.getElementById('li-u')?.value.trim();
+  const p = document.getElementById('li-p')?.value;
+  const errEl = document.getElementById('l-err');
+
+  if (!u || !p) {
+    if (errEl) {
+      errEl.textContent = 'Completa todos los campos.';
+      errEl.classList.add('show');
+    }
+    return;
+  }
+
+  // Rate limiting check
+  if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+    if (errEl) {
+      errEl.textContent = `Demasiados intentos. Espera ${LOGIN_LOCKOUT_MINUTES} minutos.`;
+      errEl.classList.add('show');
+    }
+    return;
+  }
+
+  const btn = document.getElementById('l-btn');
+  if (btn) btn.classList.add('cargando');
+
+  const email = `${u}@gallogold.local`;
+
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: email,
+    password: p
+  });
+
+  if (btn) btn.classList.remove('cargando');
+
+  if (error || !data?.user) {
+    loginAttempts++;
+    // Log failed attempt
+    await logFailedLogin(u);
+    if (errEl) {
+      errEl.textContent = 'Usuario o contraseña incorrectos.';
+      errEl.classList.add('show');
+    }
+    const passEl = document.getElementById('li-p');
+    if (passEl) passEl.value = '';
+    return;
+  }
+
+  loginAttempts = 0;
+  if (errEl) errEl.classList.remove('show');
+
+  // loadUsuarioFromAuth will be triggered by onAuthStateChange SIGNED_IN
+  // Wait a beat for the profile to load
+  await new Promise(r => setTimeout(r, 300));
+
+  if (!currentUser) {
+    // Fallback: try to load directly
+    await loadUsuarioFromAuth(data.user.id);
+  }
+
+  if (!currentUser) {
+    if (errEl) {
+      errEl.textContent = 'Error al cargar perfil de usuario.';
+      errEl.classList.add('show');
+    }
+    await sb.auth.signOut();
+    return;
+  }
+
+  // Redirect
+  if (currentUser.rol === 'admin') {
+    window.location.href = '../admin/index.html';
+  } else {
+    window.location.href = '../empleado/index.html';
+  }
+}
+
+async function doLogout() {
+  if (currentUser) {
+    await sb.from('usuarios').update({ esta_conectado: false }).eq('id', currentUser.id);
+  }
+  currentUser = null;
+  selectedJugador = null;
+  await sb.auth.signOut();
+  window.location.href = '../index.html';
+}
+
+async function logFailedLogin(username) {
+  try {
+    await sb.from('bitacora').insert({
+      tipo: 'auth_failed',
+      mensaje: `Intento fallido de inicio de sesión: ${sanitize(username)}`,
+      icon: '!'
+    });
+  } catch (e) {
+    console.error('Error logging failed login:', e);
+  }
+}
+
+const isAdmin = () => currentUser?.rol === 'admin';
+
+// ── CONSULTAS DE LECTURA SUPABASE ──
 
 async function fetchJugadores() {
   const { data, error } = await sb
@@ -178,7 +337,7 @@ async function fetchBitacora() {
   });
 }
 
-// ── REFRESH DATA & REALTIME ────────────────────────────────
+// ── REFRESH DATA & REALTIME ──
 
 async function refreshData() {
   await fetchJugadores();
@@ -194,14 +353,11 @@ async function refreshData() {
     estadoPelea = 'espera';
   }
 
-  // Si hay un jugador seleccionado, actualizar su referencia
   if (selectedJugador) {
     selectedJugador = jugadores.find(x => x.id === selectedJugador.id) || null;
   }
 
-  // Actualizar la UI
   if (typeof renderDashboard === 'function') {
-    // En Admin
     if (currentTab === 'dashboard') renderDashboard();
     if (currentTab === 'peleas') renderPeleas();
     if (currentTab === 'fichas') { renderFicha(); renderJugList(jugadores); }
@@ -209,7 +365,6 @@ async function refreshData() {
     if (currentTab === 'semanal') renderPeriodo('semanal');
     if (currentTab === 'bitacora') renderBitacora();
   } else if (typeof renderPeleas === 'function') {
-    // En Empleado
     renderPeleas();
   }
 }
@@ -224,67 +379,7 @@ function initRealtime() {
     .subscribe();
 }
 
-// ── AUTH ──────────────────────────────────────────────────
-
-async function doLogin() {
-  const u = document.getElementById('li-u').value.trim();
-  const p = document.getElementById('li-p').value;
-
-  const { data: user, error } = await sb
-    .from('usuarios')
-    .select('*')
-    .eq('username', u)
-    .eq('password_hash', p)
-    .maybeSingle();
-
-  if (error || !user) {
-    document.getElementById('l-err').classList.add('show');
-    document.getElementById('li-p').value = '';
-    return;
-  }
-
-  document.getElementById('l-err').classList.remove('show');
-
-  const sessionUser = {
-    id: user.id,
-    usuario: user.username,
-    nombre: user.nombre_completo,
-    rol: user.rol
-  };
-
-  currentUser = sessionUser;
-  sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
-
-  // Registrar inicio de sesión en BD
-  await sb
-    .from('usuarios')
-    .update({ esta_conectado: true, ultimo_acceso: new Date().toISOString() })
-    .eq('id', user.id);
-
-  // Redirigir según rol
-  if (user.rol === 'admin') {
-    window.location.href = '../admin/index.html';
-  } else {
-    window.location.href = '../empleado/index.html';
-  }
-}
-
-async function doLogout() {
-  if (currentUser) {
-    await sb
-      .from('usuarios')
-      .update({ esta_conectado: false })
-      .eq('id', currentUser.id);
-  }
-  currentUser = null;
-  selectedJugador = null;
-  sessionStorage.removeItem('currentUser');
-  window.location.href = '../index.html';
-}
-
-const isAdmin = () => currentUser?.rol === 'admin';
-
-// ── NAV / SIDEBAR ─────────────────────────────────────────
+// ── NAV / SIDEBAR ──
 function initNav() {
   const nav = document.getElementById('nav');
   if (!nav) return;
@@ -298,7 +393,7 @@ function initNav() {
   });
 }
 
-// ── ELIMINAR PELEA ──────────────────────────────────────────
+// ── ELIMINAR PELEA ──
 async function eliminarPelea(num) {
   const { data: pelea } = await sb.from('peleas').select('id').eq('numero_pelea', num).single();
   if (!pelea) return;
@@ -306,22 +401,16 @@ async function eliminarPelea(num) {
 
   const { error } = await sb.from('peleas').delete().eq('id', pelea.id);
   if (error) {
-    toast(`⚠️ Error al eliminar ${nombrePelea}: ${error.message}`, 'error');
+    toast(`Error al eliminar ${nombrePelea}: ${error.message}`, 'error');
     return;
   }
 
   await logAction('eliminar', `Pelea #${num} eliminada`, '🗑️');
   await refreshData();
-  toast(`🗑️ <strong>${nombrePelea}</strong> eliminada`, 'error');
+  toast(`<strong>${nombrePelea}</strong> eliminada`, 'error');
 }
 
-// ── CÁLCULO DE FICHA ─────────────────────────────────────
-
-/**
- * Calcula el resumen financiero de un jugador.
- * @param {Object} j — jugador del array jugadores
- * @returns {Object} { saldo, ganadas, perdidas, enJuego, totalGanadas, totalPerdidas, saldoAntTotal }
- */
+// ── CÁLCULO DE FICHA ──
 function calcFicha(j) {
   const totalPerdidas = j.apuestas
     .filter(a => a.resultado === 'perdida')
@@ -345,11 +434,7 @@ function calcFicha(j) {
   };
 }
 
-// ── BITÁCORA ──────────────────────────────────────────────
-
-/**
- * Agrega un evento a la bitácora en Supabase.
- */
+// ── BITÁCORA ──
 async function logAction(tipo, msg, icon = '🎯') {
   if (!currentUser) return;
   const { error } = await sb.from('bitacora').insert({
@@ -361,8 +446,7 @@ async function logAction(tipo, msg, icon = '🎯') {
   if (error) console.error("Error al guardar en bitácora:", error);
 }
 
-// ── CONFIRM MODAL ─────────────────────────────────────────
-
+// ── CONFIRM MODAL ──
 function showConfirm(msg, icon = '⚠️', btnText = 'Aceptar', btnClass = 'primary') {
   return new Promise(resolve => {
     let overlay = document.getElementById('confirm-overlay');
@@ -417,22 +501,20 @@ function showConfirm(msg, icon = '⚠️', btnText = 'Aceptar', btnClass = 'prim
   });
 }
 
-// ── TOAST ─────────────────────────────────────────────────
-
+// ── TOAST ──
 function toast(msg, type = 'info') {
   const t = document.getElementById('toast');
   if (!t) return;
   t.dataset.type = type;
   document.getElementById('tmsg').innerHTML = msg;
   t.classList.remove('visible');
-  void t.offsetWidth; // reflow
+  void t.offsetWidth;
   t.classList.add('visible');
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('visible'), 2800);
 }
 
-// ── PELEAS (acceso compartido de compatibilidad) ──────────
-
+// ── PELEAS (acceso compartido de compatibilidad) ──
 function getPelea(num) {
   let p = peleas.find(x => x.num === num);
   if (!p) {
@@ -448,7 +530,7 @@ function addApuestaToPelea(num, ap) {
   }
 }
 
-// ── ICONOS SVG ────────────────────────────────────────────
+// ── ICONOS SVG ──
 const I = {
   plus: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   x: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
@@ -464,8 +546,10 @@ const I = {
   dy: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--gold)"/></svg>`,
 };
 
-// ── INIT LISTENERS ────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', async () => {
+  await initAuth();
+
   const pBtn = document.getElementById('li-p');
   const uBtn = document.getElementById('li-u');
   if (pBtn) pBtn.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });

@@ -88,3 +88,108 @@ ARCHIVOS NUEVOS
 - shared/supabase.umd.js   (librería Supabase local)
 - shared/jspdf.umd.min.js  (librería jsPDF local)
 - trabajo_hoy.txt          (este archivo)
+
+==============================================================
+SESIÓN — 13/JUN/2026
+==============================================================
+
+--------------------------------------------------------------
+6. UI/UX — Login: ojito de contraseña simplificado
+--------------------------------------------------------------
+PROBLEMA: El login tenía un botón toggle que intercambiaba entre
+          dos SVG (ojo abierto / ojo tachado). El usuario pidió
+          conservar solo el ojo abierto con animación.
+
+SOLUCIÓN:
+- Se eliminó el SVG de ojo tachado (eye-off).
+- El input ahora es type="password" por defecto (oculto).
+- El botón siempre muestra el mismo SVG de ojo abierto.
+- Al hacer clic: toggle password ⇄ text, sin cambiar el icono.
+- Se agregó clase .showing al botón cuando la contraseña es visible.
+- Animación: latido sutil continuo (escalaY/opacidad) + parpadeo
+  notorio (eye-pulse-now) al hacer clic.
+
+ARCHIVOS: index.html (CSS inline + JS)
+
+--------------------------------------------------------------
+7. Admin Dashboard — Rediseño sección "Mercado" → "Flujo de Apuestas"
+--------------------------------------------------------------
+PROBLEMA: La sección "Mercado" del dashboard mostraba tarjetas
+          redundantes (Rojo/Verde/Exposición) y datos poco útiles.
+
+SOLUCIÓN:
+- Se reemplazó dash-market por dash-flow: muestra "Rojo ◈ VS ◈ Verde"
+  con el monto de cada lado y la Brecha (diferencia).
+- Se agregó dash-comision con: comisión garantizada, comisión
+  potencial, volumen total y porcentaje de comisión.
+- Se actualizaron las tarjetas de métricas a datos más relevantes
+  (Peleas, Apuestas, En Juego, Apostadores).
+
+ARCHIVOS: admin/admin.js (renderDashboard), admin/admin.css
+
+--------------------------------------------------------------
+8. Terminología: "Mercado" → "Pelea", "posición" → "apuesta"
+--------------------------------------------------------------
+PROBLEMA: Toda la app usaba términos de mercado de valores
+          (Mercado, posición, exposiciones) en lugar de términos
+          de apuestas de peleas de gallos.
+
+SOLUCIÓN:
+- "Mercado" → "Pelea" / "Peleas" en toolbars, filtros, modales,
+  títulos, confirmaciones, bitácora, tablas, PDF, tooltips.
+- "posición/posiciones" → "apuesta/apuestas/apostador/fichas"
+- "Exposición" eliminado de encabezados de columna → solo "Rojo/Verde"
+- "Registrar posición" → "Registrar apuesta"
+- "Payout" → "Pago"
+- "Selecciona una posición" (modal) → "Selecciona un apostador"
+- Dashboard: "Mercados" → "Peleas", "Abiertos" → "Abiertas",
+  "Cerrados" → "Cerrados"
+- Empleado tab: "Mercado" → "Pelea"
+
+ARCHIVOS: admin/admin.js, admin/admin.css, shared/shared.js,
+          shared/shared.css, empleado/empleado.js, empleado/empleado.css
+
+--------------------------------------------------------------
+9. Modal paso 2 — Selección de equipo rediseñada + animaciones
+--------------------------------------------------------------
+PROBLEMA: La selección de lado (rojo/verde) en el modal de
+          registrar apuesta tenía feedback visual lento porque
+          selTeam() buscaba emojis inexistentes en el texto del
+          botón para identificar el lado.
+
+SOLUCIÓN:
+- Se agregó data-side="rojo"|"verde" a los botones .mtb.
+- selTeam() ahora usa el.dataset.side, dando feedback inmediato.
+- Rediseño visual completo:
+  - Fondo degradado oscuro del color correspondiente.
+  - Animación mtbSelectR/mtbSelectV: escala 1.08→1.04 con rebote.
+  - Glow pulsante radial (mtb-glow) con glowPulseR/glowPulseV.
+  - Checkmark animado (checkPop): escala 0→1.25→1 con rotación.
+  - Lado no seleccionado: opacidad .45, escala .95, filtro gris.
+  - Sombra texturizada + doble borde con glow del color.
+
+ARCHIVOS: empleado/empleado.js, empleado/empleado.css
+
+--------------------------------------------------------------
+10. Micro-animaciones adicionales
+--------------------------------------------------------------
+- shimmer: gradiente animado en líneas doradas de tarjetas pelea
+  (empleado.css, admin.css).
+- breathe: escala 1⇄1.015 en dash-kicker (admin.css).
+- pulseGlow: glow pulsante en indicadores "En juego" (admin.css).
+- navGlow: glow pulsante en nav-item.active (shared.css).
+- translateX: desplazamiento sutil en hover de ranking items
+  (admin.css).
+
+ARCHIVOS: admin/admin.css, empleado/empleado.css, shared/shared.css
+
+--------------------------------------------------------------
+ARCHIVOS MODIFICADOS (13/JUN)
+--------------------------------------------------------------
+- index.html
+- admin/admin.js
+- admin/admin.css
+- empleado/empleado.js
+- empleado/empleado.css
+- shared/shared.js
+- shared/shared.css

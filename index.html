@@ -7,23 +7,244 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared/shared.css">
 <script src="shared/supabase.umd.js"></script>
+<script src="shared/shared.js"></script>
 <style>
-  /* ── MEJORAS RESPONSIVAS PARA EL LOGIN ── */
   html, body {
     height: 100%;
     overflow: hidden;
   }
 
-  /* Animación de entrada suave */
-  .lw {
-    animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  /* ── ESFERAS FLOTANTES DE FONDO ── */
+  #login-screen .l-orbe {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(55px);
+    pointer-events: none;
   }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+  #login-screen .l-orbe:nth-child(1) {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(201,168,76,.10), transparent 70%);
+    top: -12%; left: -14%;
+    animation: orbe1 22s ease-in-out infinite;
+  }
+  #login-screen .l-orbe:nth-child(2) {
+    width: 340px; height: 340px;
+    background: radial-gradient(circle, rgba(192,57,43,.06), transparent 70%);
+    bottom: -15%; right: -10%;
+    animation: orbe2 18s ease-in-out infinite;
+  }
+  #login-screen .l-orbe:nth-child(3) {
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(46,204,113,.04), transparent 70%);
+    bottom: 15%; left: 5%;
+    animation: orbe3 25s ease-in-out infinite;
+  }
+  @keyframes orbe1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(50px, -60px) scale(1.08); }
+    50% { transform: translate(-30px, 30px) scale(.94); }
+    75% { transform: translate(40px, 40px) scale(1.04); }
+  }
+  @keyframes orbe2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-40px, -30px) scale(1.06); }
+    66% { transform: translate(30px, 20px) scale(.95); }
+  }
+  @keyframes orbe3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    20% { transform: translate(20px, -40px) scale(1.05); }
+    40% { transform: translate(-30px, -10px) scale(.97); }
+    60% { transform: translate(10px, 30px) scale(1.03); }
+    80% { transform: translate(-20px, 10px) scale(.95); }
+  }
+  @keyframes orbe4 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-25px, -20px) scale(1.07); }
   }
 
+  /* ── PARTÍCULAS ── */
+  .l-particula {
+    position: absolute;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* ── ANIMACIÓN DE ENTRADA ESCALONADA ── */
+  .lw > * {
+    opacity: 0;
+    animation: escalonada 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .lw > *:nth-child(1) { animation-delay: 0.0s; }
+  .lw > *:nth-child(2) { animation-delay: 0.15s; }
+  .lw > *:nth-child(3) { animation-delay: 0.30s; }
+  @keyframes escalonada {
+    from { opacity: 0; transform: translateY(24px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ── GALLO FLOTANTE + RESPIRACIÓN ── */
+  .l-rooster {
+    animation: flotar 5s ease-in-out infinite;
+  }
+  @keyframes flotar {
+    0%, 100% { transform: translateY(0) scale(1); }
+    25% { transform: translateY(-4px) scale(1.01); }
+    50% { transform: translateY(-7px) scale(1.02); }
+    75% { transform: translateY(-3px) scale(0.99); }
+  }
+  .rooster-eye {
+    transform-origin: 18px 28px;
+    animation: parpadear 4s ease-in-out infinite;
+  }
+  @keyframes parpadear {
+    0%, 94%, 100% { transform: scaleY(1); }
+    96% { transform: scaleY(0.15); }
+  }
+  .rooster-body {
+    transform-origin: 30px 30px;
+    animation: respirar 5s ease-in-out infinite;
+  }
+  @keyframes respirar {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.015); }
+  }
+
+  /* ── BRILLO DE BORDE DEL CARD ── */
+  .l-card::before {
+    animation: brilloBorde 3s ease-in-out infinite;
+  }
+  @keyframes brilloBorde {
+    0%, 100% { opacity: .6; }
+    50% { opacity: 1; }
+  }
+
+  /* ── SHAKE DEL ERROR ── */
+  .l-err.show {
+    animation: agitar .4s cubic-bezier(.36,.07,.19,.97), fadeOut .35s ease 2.8s forwards;
+  }
+  @keyframes agitar {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-3px); }
+    40%, 60% { transform: translateX(3px); }
+  }
+  @keyframes fadeOut {
+    to { opacity: 0; }
+  }
+
+  /* ── INPUTS — BRILLO FOCUS ── */
+  .l-input:focus {
+    animation: respiro 2s ease-in-out infinite;
+  }
+  @keyframes respiro {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(201,168,76,.12), 0 0 24px rgba(201,168,76,.06); }
+    50% { box-shadow: 0 0 0 5px rgba(201,168,76,.18), 0 0 40px rgba(201,168,76,.10); }
+  }
+
+  /* ── OJO DECORATIVO — PARPADEO SUTIL ── */
+  .eye-deco {
+    opacity: .5;
+    transition: opacity .3s;
+  }
+  .eye-deco:hover { opacity: .7; }
+  .eye-deco.showing { opacity: .85; }
+  .eye-svg {
+    display: block;
+    width: 22px; height: 22px;
+    transition: opacity .3s, transform .3s;
+  }
+  .eye-svg {
+    animation: latido 5s ease-in-out infinite;
+  }
+  .eye-svg.eye-pulse-now {
+    animation: parpadeoOjo .5s ease-out;
+  }
+  @keyframes latido {
+    0%, 100% { opacity: .5; }
+    92% { opacity: .5; }
+    94% { opacity: .35; transform: scaleY(.85); }
+    96% { opacity: .6; transform: scaleY(1); }
+    98% { opacity: .45; }
+  }
+  @keyframes parpadeoOjo {
+    0% { opacity: .5; transform: scale(1); }
+    20% { opacity: .9; transform: scale(1.08); }
+    40% { opacity: .3; transform: scaleY(.6); }
+    60% { opacity: .7; transform: scale(1.05); }
+    100% { opacity: .5; transform: scale(1); }
+  }
+
+  /* ── BOTÓN — LOADING ── */
+  .l-btn.cargando {
+    pointer-events: none;
+    position: relative;
+    color: transparent;
+  }
+  .l-btn.cargando::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .l-btn .l-spinner {
+    display: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 20px; height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(10,8,6,.2);
+    border-top-color: #0a0806;
+    border-radius: 50%;
+    animation: girar .6s linear infinite;
+  }
+  .l-btn.cargando .l-spinner {
+    display: block;
+  }
+  @keyframes girar {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── RIPPLE DEL BOTÓN ── */
+  .l-btn .ripple-container {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .l-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(10,8,6,.18);
+    transform: scale(0);
+    animation: rippleAnim .55s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(3); opacity: 0; }
+  }
+
+  /* ── LÍNEA DORADA EN INPUT AL FOCUS ── */
+  .l-input-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    border-radius: 2px;
+    transition: width .3s cubic-bezier(.22,1,.36,1), left .3s cubic-bezier(.22,1,.36,1);
+    pointer-events: none;
+  }
+  .l-input-wrap:focus-within::after {
+    width: 80%;
+    left: 10%;
+  }
+
+  /* ── RESPONSIVE ── */
   @media (min-width: 768px) {
     .lw {
       max-width: 420px;
@@ -31,33 +252,35 @@
     }
     .l-card {
       padding: 36px;
-      box-shadow: 0 25px 80px rgba(0,0,0,0.9), 0 0 60px rgba(200,90,58,0.10);
+      box-shadow: 0 22px 70px rgba(0,0,0,.78), 0 0 60px rgba(201,168,76,.08), inset 0 1px 0 rgba(255,255,255,.06);
     }
-    .l-rooster {
-      width: 64px; height: 64px;
+    #login-screen .l-orbe:nth-child(1) {
+      width: 500px; height: 500px;
     }
-    .l-brand {
-      font-size: 36px;
-      letter-spacing: 4px;
+    #login-screen .l-orbe:nth-child(2) {
+      width: 420px; height: 420px;
     }
   }
 </style>
 </head>
 <body>
 
-<!-- Quité los estilos en línea para dejar que shared.css haga su trabajo con #login-screen -->
 <div id="login-screen">
+  <div class="l-orbe"></div>
+  <div class="l-orbe"></div>
+  <div class="l-orbe"></div>
+
   <div class="lw">
 
-    <!-- Logo -->
+    <!-- Marca -->
     <div style="text-align:center;">
       <div class="l-rooster">
         <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="30" cy="30" r="28" stroke="currentColor" stroke-width="1.2" opacity=".15"/>
           <path d="M12 32C8 44 18 52 30 50c8-1 16-6 20-14 4-8 2-16-4-20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".4"/>
-          <path d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="rooster-body" d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M12 32L4 30l6 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="18" cy="28" r="1.8" fill="currentColor" opacity=".8"/>
+          <circle class="rooster-eye" cx="18" cy="28" r="1.8" fill="currentColor" opacity=".8"/>
           <path d="M24 46c-2 6 2 10 6 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           <path d="M40 24c4-4 10-6 8-12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           <path d="M42 26c6-2 10-6 8-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -69,98 +292,128 @@
 
     <div class="l-div"></div>
 
-    <!-- Card de login -->
+    <!-- Card de inicio de sesión -->
     <div class="l-card">
-      <div class="l-title">Acceso al Sistema</div>
+      <div class="l-title">Control de Apuestas</div>
+      <div class="l-hint">Bruno's</div>
 
       <div class="l-field">
         <label class="l-label" for="li-u">Usuario</label>
-        <input class="l-input" id="li-u" type="text" placeholder="Usuario" autocomplete="off">
+        <div class="l-input-wrap">
+          <input class="l-input" id="li-u" type="text" placeholder="Usuario" autocomplete="off">
+        </div>
       </div>
 
       <div class="l-field">
         <label class="l-label" for="li-p">Contraseña</label>
-        <input class="l-input" id="li-p" type="password" placeholder="••••••••" autocomplete="current-password">
+        <div class="l-input-wrap">
+          <input class="l-input" id="li-p" type="password" placeholder="••••••••" autocomplete="current-password">
+          <button class="l-input-icon eye-deco" type="button" aria-label="Mostrar contraseña">
+            <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
 
       <div class="l-err" id="l-err">Usuario o contraseña incorrectos.</div>
 
-      <button class="l-btn" onclick="doLogin()">Entrar</button>
+      <button class="l-btn" id="l-btn" onclick="doLogin()">
+        Entrar
+        <span class="l-spinner"></span>
+        <span class="ripple-container"></span>
+      </button>
     </div>
 
   </div>
 </div>
 
 <script>
-// ── CONEXIÓN SUPABASE ──────────────────────────────────────
-const SUPABASE_URL = 'https://nqrprvaszwocvlrjsuwr.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
+const loginEls = {
+  user: document.getElementById('li-u'),
+  pass: document.getElementById('li-p'),
+  err: document.getElementById('l-err'),
+  btn: document.getElementById('l-btn')
+};
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ── LOGIN ASÍNCRONO ─────────────────────────────────────────
-async function doLogin() {
-  const u = document.getElementById('li-u').value.trim();
-  const p = document.getElementById('li-p').value;
-
-  const { data: user, error } = await sb
-    .from('usuarios')
-    .select('*')
-    .eq('username', u)
-    .eq('password_hash', p)
-    .maybeSingle();
-
-  if (error || !user) {
-    document.getElementById('l-err').classList.add('show');
-    document.getElementById('li-p').value = '';
-    return;
+// ── PARTÍCULAS ──
+(function crearParticulas() {
+  const screen = document.getElementById('login-screen');
+  const colores = ['rgba(201,168,76,', 'rgba(255,255,255,', 'rgba(232,201,122,'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'l-particula';
+    const t = Math.random() * 120 + 60;
+    p.style.cssText = `
+      left:${Math.random()*100}%; top:${Math.random()*100}%;
+      width:${Math.random()*2+1}px; height:${Math.random()*2+1}px;
+      background:${colores[i%3]}${Math.random()*.15+.04});
+      animation: flotarP ${t}s linear infinite;
+      animation-delay: -${Math.random()*t}s;
+      opacity:0;
+    `;
+    screen.appendChild(p);
   }
+})();
 
-  document.getElementById('l-err').classList.remove('show');
-
-  const sessionUser = {
-    id: user.id,
-    usuario: user.username,
-    nombre: user.nombre_completo,
-    rol: user.rol
-  };
-
-  // Guardar sesión en sessionStorage
-  sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
-
-  // Registrar conexión en la base de datos
-  await sb
-    .from('usuarios')
-    .update({ esta_conectado: true, ultimo_acceso: new Date().toISOString() })
-    .eq('id', user.id);
-
-  // Redirigir según rol
-  if (user.rol === 'admin') {
-    window.location.href = 'admin/index.html';
-  } else {
-    window.location.href = 'empleado/index.html';
+const estiloParticulas = document.createElement('style');
+estiloParticulas.textContent = `
+  @keyframes flotarP {
+    0% { transform: translateY(0) translateX(0) scale(0); opacity: 0; }
+    10% { opacity: 1; transform: translateY(-10vh) translateX(10px) scale(1); }
+    90% { opacity: 1; }
+    100% { transform: translateY(-100vh) translateX(-20px) scale(0.5); opacity: 0; }
   }
+`;
+document.head.appendChild(estiloParticulas);
+
+// ── OJO ──
+const eyeBtn = document.querySelector('.eye-deco');
+if (eyeBtn) {
+  eyeBtn.addEventListener('click', () => {
+    const hidden = loginEls.pass.type === 'password';
+    loginEls.pass.type = hidden ? 'text' : 'password';
+    eyeBtn.classList.toggle('showing', hidden);
+    eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    const svg = eyeBtn.querySelector('.eye-svg');
+    svg.classList.remove('eye-pulse-now');
+    void svg.offsetWidth;
+    svg.classList.add('eye-pulse-now');
+    setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
+  });
 }
 
-// ── ATAJOS DE TECLADO ─────────────────────────────────────
-document.getElementById('li-u').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('li-p').focus();
+// ── RIPPLE ──
+loginEls.btn.addEventListener('click', function(e) {
+  const btn = this;
+  const container = btn.querySelector('.ripple-container');
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const size = Math.max(rect.width, rect.height);
+  const x = (e.clientX || e.touches?.[0]?.clientX || rect.left + rect.width/2) - rect.left - size/2;
+  const y = (e.clientY || e.touches?.[0]?.clientY || rect.top + rect.height/2) - rect.top - size/2;
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+  container.appendChild(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove());
 });
-document.getElementById('li-p').addEventListener('keydown', e => {
+
+// ── REDIRECCIÓN SI YA HAY SESIÓN ──
+(async () => {
+  await waitForAuth();
+  if (currentUser) {
+    if (currentUser.rol === 'admin') window.location.href = 'admin/index.html';
+    else if (currentUser.rol === 'empleado') window.location.href = 'empleado/index.html';
+  }
+})();
+
+// ── ATAJOS DE TECLADO ──
+loginEls.user.addEventListener('keydown', e => {
+  if (e.key === 'Enter') loginEls.pass.focus();
+});
+loginEls.pass.addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
-
-// Redirección si ya hay sesión
-const saved = sessionStorage.getItem('currentUser');
-if (saved) {
-  try {
-    const u = JSON.parse(saved);
-    if (u?.rol === 'admin')    window.location.href = 'admin/index.html';
-    else if (u?.rol === 'empleado') window.location.href = 'empleado/index.html';
-  } catch(e) {
-    sessionStorage.removeItem('currentUser');
-  }
-}
+loginEls.user.addEventListener('input', () => loginEls.err.classList.remove('show'));
+loginEls.pass.addEventListener('input', () => loginEls.err.classList.remove('show'));
 </script>
 </body>
 </html>

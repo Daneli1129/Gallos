@@ -20,16 +20,17 @@ function setPeleaFilter(f) { peleaFilter = f; renderPeleas(); }
 
 // ── TABS DE ADMIN ─────────────────────────────────────────
 const TABS_ADMIN = [
-  { id: 'dashboard', label: 'Resumen', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>` },
+  { id: 'dashboard', label: 'Panel', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>` },
   { id: 'fichas', label: 'Fichas', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>` },
-  { id: 'peleas', label: 'Peleas', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>` },
-  { id: 'diario', label: 'Diario', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>` },
-  { id: 'semanal', label: 'Semanal', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>` },
-  { id: 'bitacora', label: 'Movimientos', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>` },
+  { id: 'peleas', label: 'Pelea', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>` },
+  { id: 'diario', label: 'Corte Día', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>` },
+  { id: 'semanal', label: 'Corte Semana', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>` },
+  { id: 'bitacora', label: 'Auditoría', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>` },
 ];
 
 // ── INIT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  await waitForAuth();
   const u = currentUser || { nombre: 'Admin', rol: 'admin' };
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
@@ -89,7 +90,7 @@ function setTab(tab) {
     document.getElementById('fichas-empty').style.display = 'flex';
     document.getElementById('fichas-empty').innerHTML = `
       <div style="color:var(--text3); opacity:0.6; margin-bottom:12px;">${UI_ICONS.user}</div>
-      <p>Selecciona un jugador para ver su ficha</p>
+      <p>Selecciona un apostador para ver su ficha</p>
     `;
     document.getElementById('ficha-detail').style.display = 'none';
   }
@@ -110,85 +111,154 @@ function renderDashboard() {
   const espera = peleas.filter(p => p.estado === 'espera').length;
 
   const totalApuestas = jugadores.reduce((s, j) => s + j.apuestas.length, 0);
-  const totalDinero = jugadores.reduce((s, j) =>
-    s + j.apuestas.reduce((a, b) => a + b.monto, 0), 0);
+  const totalRojo = jugadores.reduce((s, j) =>
+    s + j.apuestas.filter(a => a.bando === 'rojo').reduce((a, b) => a + b.monto, 0), 0);
+  const totalVerde = jugadores.reduce((s, j) =>
+    s + j.apuestas.filter(a => a.bando === 'verde').reduce((a, b) => a + b.monto, 0), 0);
+  const totalDinero = totalRojo + totalVerde;
   const totalEnJuego = jugadores.reduce((s, j) => {
     const { enJuego } = calcFicha(j);
     return s + enJuego.reduce((a, b) => a + b.monto, 0);
   }, 0);
+  const payoutRojo = totalVerde * 0.9;
+  const payoutVerde = totalRojo * 0.9;
+  const exposure = Math.abs(payoutRojo - payoutVerde);
+  const pctRojo = totalDinero > 0 ? Math.round(totalRojo / totalDinero * 100) : 50;
+  const pctVerde = 100 - pctRojo;
+  const comisionGarantizada = Math.min(totalRojo, totalVerde) * 0.1;
+  const comisionMax = Math.max(totalRojo, totalVerde) * 0.1;
+  const pctComision = totalDinero > 0 ? (comisionGarantizada / totalDinero * 100).toFixed(1) : '0.0';
 
   const top = [...jugadores]
-    .map(j => ({ ...j, apCount: j.apuestas.length }))
-    .sort((a, b) => b.apCount - a.apCount)
+    .map(j => ({ ...j, apCount: j.apuestas.length, ficha: calcFicha(j) }))
+    .sort((a, b) => b.ficha.totalPerdidas + b.ficha.totalGanadas - (a.ficha.totalPerdidas + a.ficha.totalGanadas))
     .slice(0, 5);
+
+  const activos = jugadores.filter(j => j.apuestas.some(a => !a.resultado)).length;
+  const ganadores = jugadores.filter(j => calcFicha(j).saldo > 0).length;
+  const perdedores = jugadores.filter(j => calcFicha(j).saldo < 0).length;
 
   el.innerHTML = `
     <div class="dash">
       <div class="dash-hdr">
-        <div class="dash-hdr-title">Panel de Resumen</div>
-        <div class="dash-hdr-sub">${today()}</div>
+        <div class="dash-kicker">GALLO GOLD · BRUNO'S</div>
+        <div class="dash-hdr-title">Panel de Control</div>
+        <div class="dash-hdr-sub">${today()} · ${nowStr()}</div>
+      </div>
+
+      <div class="dash-flow">
+        <div class="dash-flow-card">
+          <span class="dash-flow-dot r"></span>
+          <div class="dash-flow-info">
+            <span class="dash-flow-lbl">Rojo</span>
+            <span class="dash-flow-val">${fmt(totalRojo)}</span>
+          </div>
+          <span class="dash-flow-pct">${pctRojo}%</span>
+        </div>
+        <div class="dash-flow-vs">VS</div>
+        <div class="dash-flow-card">
+          <span class="dash-flow-dot v"></span>
+          <div class="dash-flow-info">
+            <span class="dash-flow-lbl">Verde</span>
+            <span class="dash-flow-val">${fmt(totalVerde)}</span>
+          </div>
+          <span class="dash-flow-pct">${pctVerde}%</span>
+        </div>
+        <div class="dash-flow-exp">
+          <span class="dash-flow-exp-lbl">Brecha</span>
+          <span class="dash-flow-exp-val">${fmt(exposure)}</span>
+        </div>
       </div>
 
       <div class="dash-grid">
         <div class="dash-card">
-          <div class="dash-card-icon" style="background:#C0392B22;color:#f0b0a0;">
+          <div class="dash-card-icon dash-icon-red">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           </div>
           <div class="dash-card-body">
             <div class="dash-card-val">${totalPeleas}</div>
-            <div class="dash-card-lbl">Peleas hoy</div>
+            <div class="dash-card-lbl">Peleas</div>
           </div>
           <div class="dash-card-ft">
-            <span class="dash-chip e">${espera} espera</span>
-            <span class="dash-chip a">${activas} activas</span>
+            <span class="dash-chip e">${espera} abiertas</span>
+            <span class="dash-chip a">${activas} en juego</span>
             <span class="dash-chip c">${cerradas} cerradas</span>
           </div>
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-icon" style="background:#1A8A4A22;color:#90EEB0;">
+          <div class="dash-card-icon dash-icon-green">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
           <div class="dash-card-body">
             <div class="dash-card-val">${totalApuestas}</div>
-            <div class="dash-card-lbl">Apuestas registradas</div>
+            <div class="dash-card-lbl">Apuestas</div>
           </div>
           <div class="dash-card-ft">
-            <span style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;">$${totalDinero.toLocaleString('es-MX')} total</span>
+            <span class="dash-mini-metric">${fmt(totalDinero)} volumen</span>
           </div>
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-icon" style="background:#E1BA6422;color:#F3D370;">
+          <div class="dash-card-icon dash-icon-gold">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </div>
           <div class="dash-card-body">
             <div class="dash-card-val">${fmt(totalEnJuego)}</div>
-            <div class="dash-card-lbl">En juego ahora</div>
+            <div class="dash-card-lbl">En Juego</div>
           </div>
           <div class="dash-card-ft">
-            <span style="font-size:10px;color:var(--gold);font-family:'JetBrains Mono',monospace;">En ${jugadores.reduce((s, j) => s + calcFicha(j).enJuego.length, 0)} peleas activas</span>
+            <span class="dash-mini-metric">Pago R ${fmt(payoutRojo)}</span>
+            <span class="dash-mini-metric">Pago V ${fmt(payoutVerde)}</span>
           </div>
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-icon" style="background:#1A6DB522;color:#90C8FF;">
+          <div class="dash-card-icon dash-icon-blue">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div class="dash-card-body">
             <div class="dash-card-val">${jugadores.length}</div>
-            <div class="dash-card-lbl">Jugadores activos</div>
+            <div class="dash-card-lbl">Apostadores</div>
           </div>
           <div class="dash-card-ft">
-            <span style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;">Con apuestas: ${jugadores.filter(j => j.apuestas.length).length}</span>
+            <span class="dash-mini-metric">${activos} activos</span>
+            <span class="dash-mini-metric">${ganadores} ganan</span>
+            <span class="dash-mini-metric">${perdedores} pierden</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Comisión -->
+      <div class="dash-comision">
+        <div class="dash-comision-body">
+          <div class="dash-comision-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="dash-comision-info">
+            <div class="dash-comision-val">${fmt(comisionGarantizada)}</div>
+            <div class="dash-comision-lbl">Comisión Garantizada</div>
+          </div>
+          <div class="dash-comision-div"></div>
+          <div class="dash-comision-info">
+            <div class="dash-comision-val">${fmt(comisionMax)}</div>
+            <div class="dash-comision-lbl">Comisión Potencial</div>
+          </div>
+          <div class="dash-comision-div"></div>
+          <div class="dash-comision-info">
+            <div class="dash-comision-val dash-comision-vol">${fmt(totalDinero)}</div>
+            <div class="dash-comision-lbl">Volumen Total</div>
+          </div>
+          <div class="dash-comision-div"></div>
+          <div class="dash-comision-badge">${pctComision}%</div>
         </div>
       </div>
 
       <div class="dash-section">
         <div class="dash-section-title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
-          Jugadores con más actividad
+          Mayor Actividad
+          <span class="dash-section-caption">Volumen operativo</span>
         </div>
         <div class="dash-rank">
           ${top.map((j, i) => `
@@ -196,11 +266,11 @@ function renderDashboard() {
               <span class="dash-rank-pos ${i < 3 ? 'top' : ''}">${i + 1}</span>
               <div class="dash-rank-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
               <div class="dash-rank-info">
-                <div class="dash-rank-name">${j.nombre}</div>
-                <div class="dash-rank-meta">${j.apCount} apuestas</div>
+                <div class="dash-rank-name">${sanitize(j.nombre)}</div>
+                <div class="dash-rank-meta">${j.apCount} apuestas · ${j.ficha.enJuego.length} abiertas</div>
               </div>
-              <div class="dash-rank-saldo ${j.apCount > 0 ? (calcFicha(j).saldo >= 0 ? 'sp' : 'sn') : 'sz'}">
-                ${calcFicha(j).saldo >= 0 ? '+' : '−'}${fmt(calcFicha(j).saldo)}
+              <div class="dash-rank-saldo ${j.ficha.saldo >= 0 ? 'sp' : 'sn'}">
+                ${j.ficha.saldo >= 0 ? '+' : '−'}${fmt(j.ficha.saldo)}
               </div>
             </div>
           `).join('')}
@@ -236,7 +306,7 @@ function renderMobJugList(list) {
     d.innerHTML = `
       <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
       <div class="p-info">
-        <div class="p-name">${j.nombre}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}</div>
+        <div class="p-name">${sanitize(j.nombre)}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}</div>
         <div class="p-meta">
           <span class="p-stats">
             <span class="p-stat-tot">${j.apuestas.length} apuestas</span>
@@ -271,7 +341,7 @@ function renderJugList(list) {
     d.innerHTML = `
       <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
       <div class="p-info">
-        <div class="p-name">${j.nombre}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}</div>
+        <div class="p-name">${sanitize(j.nombre)}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}</div>
         <div class="p-meta">
           <span class="p-stats">
             <span class="p-stat-tot">${j.apuestas.length} apuestas</span>
@@ -339,7 +409,7 @@ function renderFicha() {
       <div class="fc-head">
         <div class="fc-av" style="background:${j.color}22;color:${j.color};border-color:${j.color};">${initials(j.nombre)}</div>
         <div class="fc-info">
-          <div class="fc-name">${j.nombre}</div>
+          <div class="fc-name">${sanitize(j.nombre)}</div>
           <div class="fc-sub">${j.apuestas.length} apuestas · ${today()}</div>
           ${j.addedBy ? `<div class="fc-by">Registrado por ${j.addedBy}</div>` : ''}
         </div>
@@ -349,8 +419,8 @@ function renderFicha() {
         </div>
       </div>
       <div class="fc-actions">
-        <button class="btn-sm" onclick="exportPDF('${j.id}','diario')">${I.dl} PDF Hoy</button>
-        <button class="btn-sm" onclick="exportPDF('${j.id}','semanal')">${I.dl} PDF Semanal</button>
+        <button class="btn-sm" onclick="exportPDF('${j.id}','diario')">${I.dl} PDF Día</button>
+        <button class="btn-sm" onclick="exportPDF('${j.id}','semanal')">${I.dl} PDF Corte</button>
       </div>
       <div class="fc-saldo-ant">
         <div class="fc-sa-row">
@@ -422,9 +492,9 @@ function renderPeleas() {
     .filter(p => peleaFilter === 'todas' || p.estado === peleaFilter);
   if (!lista.length) {
     sc.innerHTML = `<div class="pb-empty">${
-      peleaFilter === 'todas' ? 'Sin peleas registradas aún.' :
-      peleaFilter === 'activa' ? 'No hay peleas activas.' :
-      peleaFilter === 'espera' ? 'No hay peleas en espera.' :
+      peleaFilter === 'todas' ? 'No hay peleas registradas.' :
+      peleaFilter === 'activa' ? 'No hay peleas en juego.' :
+      peleaFilter === 'espera' ? 'No hay peleas abiertas.' :
       'No hay peleas cerradas.'
     }</div>`;
     return;
@@ -439,14 +509,14 @@ function renderToolbar() {
   const espera  = peleas.filter(p => p.estado === 'espera').length;
   const cerradas = peleas.filter(p => p.estado === 'cerrada').length;
   const filtros = [
-    { id: 'todas',  label: `Todas`,  count: totalPeleas },
-    { id: 'activa', label: 'Activas', count: activas },
-    { id: 'espera', label: 'Espera',  count: espera },
+    { id: 'todas',  label: `Pelea`,  count: totalPeleas },
+    { id: 'activa', label: 'En juego', count: activas },
+    { id: 'espera', label: 'Abiertas',  count: espera },
     { id: 'cerrada',label: 'Cerradas',count: cerradas },
   ];
   tb.innerHTML = `
-    <div class="p-num-big">Peleas</div>
-    <span class="p-num-sub">${totalPeleas} · #${peleaActual}</span>
+    <div class="p-num-big">Pelea</div>
+    <span class="p-num-sub">${totalPeleas} peleas · #${peleaActual}</span>
     <div class="ctrl-sep"></div>
     <div class="pf-row">
       ${filtros.map(f => `
@@ -457,7 +527,7 @@ function renderToolbar() {
         </button>`).join('')}
     </div>
     <div class="ctrl-sep"></div>
-    <div class="admin-ro">${I.eye} Solo lectura</div>`;
+    <div class="admin-ro">${I.eye} Admin / solo lectura</div>`;
 }
 
 function toggleMin(num) {
@@ -475,7 +545,7 @@ function buildPB(p) {
   const pctR   = total > 0 ? Math.round(tR / total * 100) : 50;
   const pctV   = 100 - pctR;
   const pCls   = p.estado === 'activa' ? 'pill-a' : p.estado === 'espera' ? 'pill-e' : 'pill-c';
-  const pTxt   = p.estado === 'activa' ? 'Activa' : p.estado === 'espera' ? 'Espera' : 'Cerrada';
+  const pTxt   = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'Abierto' : 'Cerrado';
 
   const chevron = p.minimizada
     ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
@@ -499,7 +569,7 @@ function buildPB(p) {
   }
 
   const delBtn = `
-    <button class="pb-del-btn" onclick="event.stopPropagation();confirmEliminarPelea(${p.num})" title="Eliminar pelea">
+      <button class="pb-del-btn" onclick="event.stopPropagation();confirmEliminarPelea(${p.num})" title="Eliminar pelea">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
       </svg>
@@ -510,11 +580,11 @@ function buildPB(p) {
         const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
         const mc  = a.resultado === 'ganada' ? ' g'  : a.resultado === 'perdida' ? ' p'  : '';
         return `<div class="ap-row${cls}">
-          <span class="ap-name">${a.nombre}</span>
+          <span class="ap-name">${sanitize(a.nombre)}</span>
           <span class="ap-monto${mc}">${fmt(a.monto)}</span>
         </div>`;
       }).join('')
-    : '<div class="ap-empty">Sin apostadores</div>';
+    : '<div class="ap-empty">Sin apuestas</div>';
 
   const bar = total > 0
     ? `<div class="pelea-bar"><div class="pb-bar-r" style="width:${pctR}%"></div><div class="pb-bar-v" style="width:${pctV}%"></div></div>`
@@ -528,7 +598,7 @@ function buildPB(p) {
       <div class="pb-head-l">
         <span class="pb-num">#${p.num}</span>
         <span class="status-pill ${pCls}">${pTxt}</span>
-        <span class="pb-total">${fmt(total)}</span>
+        <span class="pb-total">${fmt(total)} <span style="font-size:9px;color:var(--text3);font-weight:700;">VOL</span></span>
       </div>
       <div class="pb-head-r">
         ${estadoBtns}
@@ -541,22 +611,22 @@ function buildPB(p) {
       ${bar}
       <div class="p-cols">
         <div class="col-r">
-          <div class="col-hdr r"><span class="col-dot"></span> Rojo · ${fmt(tR)} <span class="col-pct">${pctR}%</span></div>
+          <div class="col-hdr r"><span class="col-dot"></span> Rojo <span class="col-pct">${pctR}%</span></div>
           ${buildRows(rojos)}
         </div>
         <div>
-          <div class="col-hdr v"><span class="col-dot"></span> Verde · ${fmt(tV)} <span class="col-pct">${pctV}%</span></div>
+          <div class="col-hdr v"><span class="col-dot"></span> Verde <span class="col-pct">${pctV}%</span></div>
           ${buildRows(verdes)}
         </div>
       </div>
       <div class="pb-reparte">
         <div class="pb-rep-cell">
-          <span class="pb-rep-lbl">Si gana Rojo</span>
+          <span class="pb-rep-lbl">Pago Rojo</span>
           <span class="pb-rep-arrow">→</span>
           <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * 0.9)}</span>
         </div>
         <div class="pb-rep-cell">
-          <span class="pb-rep-lbl">Si gana Verde</span>
+          <span class="pb-rep-lbl">Pago Verde</span>
           <span class="pb-rep-arrow">→</span>
           <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * 0.9)}</span>
         </div>
@@ -567,7 +637,7 @@ function buildPB(p) {
 async function confirmEliminarPelea(pN) {
   const p = getPelea(pN);
   if (!p) return;
-  const ok = await showConfirm(`¿Eliminar <strong>Pelea #${pN}</strong>?<br><span style="font-size:12px;color:var(--text3);">Se borrarán todas las apuestas asociadas. Esta acción no se puede deshacer.</span>`, '🗑️', 'Eliminar', 'danger');
+  const ok = await showConfirm(`¿Eliminar <strong>Pelea #${pN}</strong>?<br><span style="font-size:12px;color:var(--text3);">Se borrarán todas las apuestas asociadas. Esta acción no se puede deshacer.</span>`, '×', 'Eliminar', 'danger');
   if (!ok) return;
   await eliminarPelea(pN);
   renderPeleas();
@@ -604,7 +674,7 @@ function renderPeriodo(tipo) {
       <div class="mf-head">
         <div class="mf-av" style="background:${j.color}22;color:${j.color};border-color:${j.color};">${initials(j.nombre)}</div>
         <div class="mf-info">
-          <div class="mf-name">${j.nombre}</div>
+          <div class="mf-name">${sanitize(j.nombre)}</div>
           <div class="mf-ap">${j.apuestas.length} apuestas</div>
         </div>
         <div class="mf-bal ${ok ? 'pos' : 'neg'}">
@@ -634,7 +704,7 @@ function renderPeriodo(tipo) {
 
   el.innerHTML = `
     <div class="ph-hdr">
-      <div class="ph-hdr-t">${esDiario ? 'Resumen Diario' : 'Resumen Semanal'}</div>
+      <div class="ph-hdr-t">${esDiario ? 'Corte Diario' : 'Corte Semanal'}</div>
       <div class="ph-hdr-s">${today()} · ${participaron.length} participantes</div>
       <div class="ph-stats">
         <div class="ph-stat g">
@@ -653,20 +723,20 @@ function renderPeriodo(tipo) {
       <button class="ph-dl" onclick="exportPDF_bulk('${tipo}')">${I.dl} Descargar PDF</button>
     </div>
     <div class="mini-fichas-grid">
-      ${participaron.length ? miniFichas : '<div class="mf-empty">Ningún jugador con apuestas registradas.</div>'}
+      ${participaron.length ? miniFichas : '<div class="mf-empty">Ningún apostador con apuestas registradas.</div>'}
     </div>`;
 }
 
 // ── BITÁCORA ──────────────────────────────────────────────
 const tipoLogInfo = t => ({
-  apuesta:   { label: 'Apuesta',   icon: '💰', color: 'var(--accent2)' },
-  resultado: { label: 'Resultado', icon: '🏆', color: 'var(--green2)' },
-  eliminar:  { label: 'Eliminado', icon: '🗑️', color: 'var(--rojo2)' },
-  estado:    { label: 'Estado',    icon: '⚡', color: 'var(--blue2)' },
-  'nueva-pelea': { label: 'Nueva Pelea', icon: '🐓', color: 'var(--blue2)' },
-  'nuevo-jugador': { label: 'Nuevo Jugador', icon: '✨', color: 'var(--accent2)' },
-  'saldo-negativo': { label: 'Alerta', icon: '⚠️', color: 'var(--rojo2)' },
-})[t] || { label: 'Movimiento', icon: '📋', color: 'var(--text3)' };
+  apuesta:   { label: 'Apuesta',   icon: '$', color: 'var(--accent2)' },
+  resultado: { label: 'Resultado', icon: '✓', color: 'var(--green2)' },
+  eliminar:  { label: 'Eliminado', icon: '×', color: 'var(--rojo2)' },
+  estado:    { label: 'Estado',    icon: '•', color: 'var(--blue2)' },
+  'nueva-pelea': { label: 'Pelea', icon: '+', color: 'var(--blue2)' },
+  'nuevo-jugador': { label: 'Apostador', icon: '+', color: 'var(--accent2)' },
+  'saldo-negativo': { label: 'Alerta', icon: '!', color: 'var(--rojo2)' },
+})[t] || { label: 'Auditoría', icon: '•', color: 'var(--text3)' };
 
 const fmtTimeRel = ts => {
   if (!ts) return '';
@@ -717,12 +787,12 @@ function renderBitacora() {
           </div>
         </div>`;
       }).join('')
-    : '<div class="log-empty">No hay movimientos que mostrar.</div>';
+    : '<div class="log-empty">No hay auditoría que mostrar.</div>';
 
   el.innerHTML = `
     <div class="log-hdr">
-      <div class="log-hdr-t">Registro</div>
-      <div class="log-hdr-s">${today()} · ${counts.todos} movimientos</div>
+      <div class="log-hdr-t">Auditoría</div>
+      <div class="log-hdr-s">${today()} · ${counts.todos} eventos</div>
     </div>
     <div class="log-filters">
       <button class="log-fb${logFiltro==='todos'?' active':''}" onclick="setLogF('todos')">
@@ -765,7 +835,7 @@ function buildPDF(j, tipo) {
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.setFont('helvetica', 'normal');
-  doc.text("Sistema de Registro de Peleas", W / 2, y, { align: 'center' });
+  doc.text("Control de Apuestas", W / 2, y, { align: 'center' });
   
   y += 5;
   doc.text(`${today()}`, W / 2, y, { align: 'center' });
@@ -794,8 +864,8 @@ function buildPDF(j, tipo) {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text("PELEAS PERDIDAS", mg + cW / 2, y + 5.5, { align: 'center' });
-  doc.text("PELEAS GANADAS", mg + cW + cW / 2, y + 5.5, { align: 'center' });
+  doc.text("PERDIDAS", mg + cW / 2, y + 5.5, { align: 'center' });
+  doc.text("GANADAS", mg + cW + cW / 2, y + 5.5, { align: 'center' });
   
   y += 8;
   
