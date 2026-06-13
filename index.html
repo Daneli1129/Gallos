@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="shared/shared.css">
 <script src="shared/supabase.umd.js"></script>
-<script src="shared/shared.js"></script>
+<script src="shared/shared.js?v=2"></script>
 <style>
   html, body {
     height: 100%;
@@ -16,10 +16,7 @@
 
   /* ── ESFERAS FLOTANTES DE FONDO ── */
   #login-screen .l-orbe {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(55px);
-    pointer-events: none;
+    display: none;
   }
   #login-screen .l-orbe:nth-child(1) {
     width: 400px; height: 400px;
@@ -144,11 +141,11 @@
 
   /* ── OJO DECORATIVO — PARPADEO SUTIL ── */
   .eye-deco {
-    opacity: .5;
+    opacity: .65;
     transition: opacity .3s;
   }
-  .eye-deco:hover { opacity: .7; }
-  .eye-deco.showing { opacity: .85; }
+  .eye-deco:hover { opacity: .85; }
+  .eye-deco.showing { opacity: 1; }
   .eye-svg {
     display: block;
     width: 22px; height: 22px;
@@ -159,6 +156,21 @@
   }
   .eye-svg.eye-pulse-now {
     animation: parpadeoOjo .5s ease-out;
+  }
+  .eye-pupil {
+    transform-origin: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .eye-deco.showing .eye-pupil {
+    transform: scale(0.6);
+  }
+  .eye-slash {
+    stroke-dasharray: 23;
+    stroke-dashoffset: 23;
+    transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .eye-deco.showing .eye-slash {
+    stroke-dashoffset: 0;
   }
   @keyframes latido {
     0%, 100% { opacity: .5; }
@@ -309,7 +321,11 @@
         <div class="l-input-wrap">
           <input class="l-input" id="li-p" type="password" placeholder="••••••••" autocomplete="current-password">
           <button class="l-input-icon eye-deco" type="button" aria-label="Mostrar contraseña">
-            <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle class="eye-pupil" cx="12" cy="12" r="3"/>
+              <line class="eye-slash" x1="4" y1="4" x2="20" y2="20"/>
+            </svg>
           </button>
         </div>
       </div>

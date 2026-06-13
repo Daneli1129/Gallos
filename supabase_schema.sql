@@ -1,7 +1,37 @@
 -- ================================================================================
 --   GALLO GOLD — BRUNO'S
 --   Esquema de Base de Datos para Supabase (PostgreSQL)
---   Versión con Supabase Auth + RLS + pgcrypto
+--   Versión con Supabase Auth + RLS + pgcrypto + Configuraciones + Mejoras
+-- ================================================================================
+--
+--  ⚠️ NOTA DE MIGRACIÓN: Si ya tienes las tablas creadas en Supabase, ejecuta 
+--  el siguiente script SQL en el SQL Editor de tu Dashboard de Supabase:
+--
+--  -- 1. Actualizar restricciones para admitir Empates y Cancelaciones
+--  ALTER TABLE public.peleas DROP CONSTRAINT IF EXISTS peleas_ganador_check;
+--  ALTER TABLE public.peleas ADD CONSTRAINT peleas_ganador_check CHECK (ganador IN ('verde', 'rojo', 'empate', 'anulada', NULL));
+--
+--  ALTER TABLE public.apuestas DROP CONSTRAINT IF EXISTS apuestas_resultado_check;
+--  ALTER TABLE public.apuestas ADD CONSTRAINT apuestas_resultado_check CHECK (resultado IN ('pendiente', 'ganada', 'perdida', 'devuelta'));
+--
+--  -- 2. Crear tabla de configuraciones del sistema
+--  CREATE TABLE IF NOT EXISTS public.configuraciones (
+--      clave VARCHAR(50) PRIMARY KEY,
+--      valor TEXT NOT NULL,
+--      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+--  );
+--
+--  ALTER TABLE public.configuraciones ENABLE ROW LEVEL SECURITY;
+--  CREATE POLICY "configuraciones_select_auth" ON public.configuraciones FOR SELECT USING (get_user_role() IS NOT NULL);
+--  CREATE POLICY "configuraciones_write_admin" ON public.configuraciones FOR ALL USING (get_user_role() = 'admin');
+--
+--  -- 3. Valores iniciales de configuración
+--  INSERT INTO public.configuraciones (clave, valor) VALUES 
+--  ('comision_porcentaje', '10'),
+--  ('limite_credito', '5000'),
+--  ('pin_autorizacion', '8888')
+--  ON CONFLICT (clave) DO NOTHING;
 -- ================================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -36,7 +66,7 @@ CREATE TABLE peleas (
     id SERIAL PRIMARY KEY,
     numero_pelea INT UNIQUE NOT NULL,
     estado VARCHAR(20) DEFAULT 'espera' CHECK (estado IN ('espera', 'activa', 'cerrada')),
-    ganador VARCHAR(10) CHECK (ganador IN ('verde', 'rojo', NULL)),
+    ganador VARCHAR(10) CHECK (ganador IN ('verde', 'rojo', 'empate', 'anulada', NULL)),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -48,13 +78,21 @@ CREATE TABLE apuestas (
     jugador_id VARCHAR(20) NOT NULL REFERENCES jugadores(id) ON DELETE RESTRICT,
     bando VARCHAR(10) NOT NULL CHECK (bando IN ('verde', 'rojo')),
     monto DECIMAL(12, 2) NOT NULL CHECK (monto > 0),
-    resultado VARCHAR(20) DEFAULT 'pendiente' CHECK (resultado IN ('pendiente', 'ganada', 'perdida')),
+    resultado VARCHAR(20) DEFAULT 'pendiente' CHECK (resultado IN ('pendiente', 'ganada', 'perdida', 'devuelta')),
     autorizado_por INT REFERENCES usuarios(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Tabla de Bitácora (Historial de movimientos)
+-- 5. Tabla de Configuraciones del sistema
+CREATE TABLE configuraciones (
+    clave VARCHAR(50) PRIMARY KEY,
+    valor TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 6. Tabla de Bitácora (Historial de movimientos)
 CREATE TABLE bitacora (
     id SERIAL PRIMARY KEY,
     tipo VARCHAR(50) NOT NULL,
@@ -64,13 +102,13 @@ CREATE TABLE bitacora (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Índices
+-- 7. Índices
 CREATE INDEX IF NOT EXISTS idx_apuestas_pelea ON apuestas(pelea_id);
 CREATE INDEX IF NOT EXISTS idx_apuestas_jugador ON apuestas(jugador_id);
 CREATE INDEX IF NOT EXISTS idx_bitacora_usuario ON bitacora(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_usuarios_auth_id ON usuarios(auth_id);
 
--- 7. Funciones helper para RLS
+-- 8. Funciones helper para RLS
 CREATE OR REPLACE FUNCTION public.get_user_role()
 RETURNS TEXT
 LANGUAGE SQL STABLE
@@ -85,11 +123,12 @@ AS $$
   SELECT id FROM public.usuarios WHERE auth_id = auth.uid() LIMIT 1;
 $$;
 
--- 8. RLS Policies (basadas en auth.uid())
+-- 9. RLS Policies (basadas en auth.uid())
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.jugadores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peleas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.apuestas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.configuraciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bitacora ENABLE ROW LEVEL SECURITY;
 
 -- usuarios: solo lectura/edición del propio registro
@@ -114,6 +153,10 @@ CREATE POLICY "apuestas_insert_auth" ON public.apuestas FOR INSERT WITH CHECK (g
 CREATE POLICY "apuestas_update_auth" ON public.apuestas FOR UPDATE USING (get_user_role() IN ('admin', 'empleado'));
 CREATE POLICY "apuestas_delete_auth" ON public.apuestas FOR DELETE USING (get_user_role() IN ('admin', 'empleado'));
 
+-- configuraciones: auth puede leer, solo admin puede escribir
+CREATE POLICY "configuraciones_select_auth" ON public.configuraciones FOR SELECT USING (get_user_role() IS NOT NULL);
+CREATE POLICY "configuraciones_all_admin" ON public.configuraciones FOR ALL USING (get_user_role() = 'admin');
+
 -- bitacora: auth puede leer/insert, solo admin update/delete
 CREATE POLICY "bitacora_select_auth" ON public.bitacora FOR SELECT USING (get_user_role() IS NOT NULL);
 CREATE POLICY "bitacora_insert_auth" ON public.bitacora FOR INSERT WITH CHECK (get_user_role() IN ('admin', 'empleado'));
@@ -125,7 +168,7 @@ CREATE POLICY "bitacora_insert_anon_failed_auth" ON public.bitacora
 CREATE POLICY "bitacora_update_auth" ON public.bitacora FOR UPDATE USING (get_user_role() = 'admin');
 CREATE POLICY "bitacora_delete_auth" ON public.bitacora FOR DELETE USING (get_user_role() = 'admin');
 
--- 9. Seed data (sin contraseñas — se crean desde Supabase Auth Dashboard)
+-- 10. Seed data (sin contraseñas — se crean desde Supabase Auth Dashboard)
 INSERT INTO usuarios (username, password_hash, nombre_completo, rol)
 SELECT 'eliaglz', '', 'Elián González', 'admin'
 WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'eliaglz');
@@ -133,3 +176,9 @@ WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'eliaglz');
 INSERT INTO usuarios (username, password_hash, nombre_completo, rol)
 SELECT 'vgonzalez', '', 'Vanessa González', 'empleado'
 WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE username = 'vgonzalez');
+
+INSERT INTO configuraciones (clave, valor) VALUES 
+('comision_porcentaje', '10'),
+('limite_credito', '5000'),
+('pin_autorizacion', '8888')
+ON CONFLICT (clave) DO NOTHING;

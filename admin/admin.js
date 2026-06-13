@@ -26,6 +26,7 @@ const TABS_ADMIN = [
   { id: 'diario', label: 'Corte Día', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>` },
   { id: 'semanal', label: 'Corte Semana', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>` },
   { id: 'bitacora', label: 'Auditoría', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>` },
+  { id: 'config', label: 'Ajustes', icon: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>` },
 ];
 
 // ── INIT ──────────────────────────────────────────────────
@@ -99,6 +100,7 @@ function setTab(tab) {
   if (tab === 'diario')    renderPeriodo('diario');
   if (tab === 'semanal')   renderPeriodo('semanal');
   if (tab === 'bitacora')  renderBitacora();
+  if (tab === 'config')    renderConfig();
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
@@ -155,7 +157,16 @@ function renderDashboard() {
           </div>
           <span class="dash-flow-pct">${pctRojo}%</span>
         </div>
-        <div class="dash-flow-vs">VS</div>
+        
+        <div class="dash-flow-vs-circle">
+          <svg width="68" height="68" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"></circle>
+            <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--rojo2)" stroke-width="2.5" stroke-dasharray="${pctRojo} ${100 - pctRojo}" stroke-dashoffset="25" style="filter: drop-shadow(0 0 4px var(--rojo2));"></circle>
+            <circle cx="18" cy="18" r="15.915" fill="none" stroke="var(--green2)" stroke-width="2.5" stroke-dasharray="${pctVerde} ${100 - pctVerde}" stroke-dashoffset="${25 - pctRojo}" style="filter: drop-shadow(0 0 4px var(--green2));"></circle>
+          </svg>
+          <div class="dash-flow-vs-lbl">VS</div>
+        </div>
+
         <div class="dash-flow-card">
           <span class="dash-flow-dot v"></span>
           <div class="dash-flow-info">
@@ -261,9 +272,14 @@ function renderDashboard() {
           <span class="dash-section-caption">Volumen operativo</span>
         </div>
         <div class="dash-rank">
-          ${top.map((j, i) => `
+          ${top.map((j, i) => {
+            const medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
+            const posBadge = medals[i] 
+              ? `<span class="dash-rank-medal" title="Top ${i+1}">${medals[i]}</span>` 
+              : `<span class="dash-rank-pos">${i + 1}</span>`;
+            return `
             <div class="dash-rank-item" onclick="selectJugador(jugadores.find(x=>x.id==='${j.id}')); setTab('fichas');">
-              <span class="dash-rank-pos ${i < 3 ? 'top' : ''}">${i + 1}</span>
+              ${posBadge}
               <div class="dash-rank-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
               <div class="dash-rank-info">
                 <div class="dash-rank-name">${sanitize(j.nombre)}</div>
@@ -272,8 +288,8 @@ function renderDashboard() {
               <div class="dash-rank-saldo ${j.ficha.saldo >= 0 ? 'sp' : 'sn'}">
                 ${j.ficha.saldo >= 0 ? '+' : '−'}${fmt(j.ficha.saldo)}
               </div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
       </div>
     </div>`;
@@ -483,15 +499,42 @@ async function updSaldoAnt(id, val) {
 }
 
 // ── PELEAS (solo lectura) ─────────────────────────────────
+let searchPeleaQuery = '';
+
+function searchPelea(val) {
+  searchPeleaQuery = val.trim();
+  renderPeleas();
+  setTimeout(() => {
+    const inp = document.getElementById('pelea-search-inp');
+    if (inp) {
+      inp.focus();
+      const val = inp.value;
+      inp.value = '';
+      inp.value = val;
+    }
+  }, 10);
+}
+
 function renderPeleas() {
   renderToolbar();
   const sc    = document.getElementById('peleas-scroll');
   sc.innerHTML = '';
+  const stateWeight = { activa: 0, espera: 1, cerrada: 2 };
   const lista = [...peleas]
-    .sort((a, b) => b.num - a.num)
-    .filter(p => peleaFilter === 'todas' || p.estado === peleaFilter);
+    .sort((a, b) => {
+      const wA = stateWeight[a.estado] !== undefined ? stateWeight[a.estado] : 99;
+      const wB = stateWeight[b.estado] !== undefined ? stateWeight[b.estado] : 99;
+      if (wA !== wB) return wA - wB;
+      return b.num - a.num;
+    })
+    .filter(p => {
+      const matchFilter = peleaFilter === 'todas' || p.estado === peleaFilter;
+      const matchSearch = !searchPeleaQuery || String(p.num).includes(searchPeleaQuery);
+      return matchFilter && matchSearch;
+    });
   if (!lista.length) {
     sc.innerHTML = `<div class="pb-empty">${
+      searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
       peleaFilter === 'todas' ? 'No hay peleas registradas.' :
       peleaFilter === 'activa' ? 'No hay peleas en juego.' :
       peleaFilter === 'espera' ? 'No hay peleas abiertas.' :
@@ -518,6 +561,10 @@ function renderToolbar() {
     <div class="p-num-big">Pelea</div>
     <span class="p-num-sub">${totalPeleas} peleas · #${peleaActual}</span>
     <div class="ctrl-sep"></div>
+    <div class="search-box p-search">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="number" id="pelea-search-inp" placeholder="Buscar #" value="${searchPeleaQuery || ''}" oninput="searchPelea(this.value)">
+    </div>
     <div class="pf-row">
       ${filtros.map(f => `
         <button class="pf-btn${peleaFilter === f.id ? ' active' : ''}"
@@ -526,8 +573,26 @@ function renderToolbar() {
           <span class="pf-cnt">${f.count}</span>
         </button>`).join('')}
     </div>
+    <div class="estado-group">
+      <button class="btn-estado" onclick="expandirTodas()" title="Expandir todas las peleas">
+        ${I.eye} <span class="etxt">Exp. todo</span>
+      </button>
+      <button class="btn-estado" onclick="colapsarTodas()" title="Colapsar todas las peleas">
+        ${I.eyeOff} <span class="etxt">Col. todo</span>
+      </button>
+    </div>
     <div class="ctrl-sep"></div>
     <div class="admin-ro">${I.eye} Admin / solo lectura</div>`;
+}
+
+function expandirTodas() {
+  peleas.forEach(p => p.minimizada = false);
+  renderPeleas();
+}
+
+function colapsarTodas() {
+  peleas.forEach(p => p.minimizada = true);
+  renderPeleas();
 }
 
 function toggleMin(num) {
@@ -536,7 +601,7 @@ function toggleMin(num) {
 }
 
 function buildPB(p) {
-  if (p.minimizada === undefined) p.minimizada = false;
+  if (p.minimizada === undefined) p.minimizada = p.estado === 'cerrada';
   const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
   const tR     = rojos.reduce((s, a) => s + a.monto, 0);
@@ -560,10 +625,20 @@ function buildPB(p) {
 
   let winnerTag = '';
   if (p.ganador) {
-    const wCls = p.ganador === 'verde' ? 'v' : 'r';
-    winnerTag = `<div class="pb-winner ${wCls}">
-      ${I.trophy} Ganó <strong>${p.ganador === 'verde' ? 'Verde' : 'Rojo'}</strong>
-    </div>`;
+    if (p.ganador === 'empate') {
+      winnerTag = `<div class="pb-winner" style="color:var(--gold2);">
+        ${I.trophy} Pelea declarada en <strong>Empate</strong>
+      </div>`;
+    } else if (p.ganador === 'anulada') {
+      winnerTag = `<div class="pb-winner" style="color:var(--text3);">
+        ${I.x} Pelea <strong>Anulada / Cancelada</strong>
+      </div>`;
+    } else {
+      const wCls = p.ganador === 'verde' ? 'v' : 'r';
+      winnerTag = `<div class="pb-winner ${wCls}">
+        ${I.trophy} Ganó <strong>${p.ganador === 'verde' ? 'Verde' : 'Rojo'}</strong>
+      </div>`;
+    }
   } else if (p.estado === 'cerrada') {
     winnerTag = `<div class="pb-winner" style="opacity:.4;">Sin resultado</div>`;
   }
@@ -591,7 +666,7 @@ function buildPB(p) {
     : '';
 
   const div = document.createElement('div');
-  div.className = 'pb';
+  div.className = p.estado === 'activa' ? 'pb active-pelea-card' : 'pb';
   div.id = `bloque-${p.num}`;
   div.innerHTML = `
     <div class="pb-head" onclick="toggleMin(${p.num})">
@@ -736,6 +811,8 @@ const tipoLogInfo = t => ({
   'nueva-pelea': { label: 'Pelea', icon: '+', color: 'var(--blue2)' },
   'nuevo-jugador': { label: 'Apostador', icon: '+', color: 'var(--accent2)' },
   'saldo-negativo': { label: 'Alerta', icon: '!', color: 'var(--rojo2)' },
+  config:    { label: 'Ajustes',   icon: '⚙️', color: 'var(--gold)' },
+  corte_jornada: { label: 'Corte', icon: '🏁', color: 'var(--green2)' },
 })[t] || { label: 'Auditoría', icon: '•', color: 'var(--text3)' };
 
 const fmtTimeRel = ts => {
@@ -983,6 +1060,151 @@ function exportPDF_bulk(tipo) {
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   const k = e.key.toLowerCase();
-  const map = { r: 'dashboard', f: 'fichas', p: 'peleas', d: 'diario', s: 'semanal', m: 'bitacora' };
+  const map = { r: 'dashboard', f: 'fichas', p: 'peleas', d: 'diario', s: 'semanal', m: 'bitacora', a: 'config' };
   if (map[k]) { setTab(map[k]); e.preventDefault(); }
 });
+
+// ── AJUSTES & CONFIGURACIONES (NUEVO) ──────────────────────
+function renderConfig() {
+  const el = document.getElementById('config-wrap');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="config-container">
+      <div class="dash-hdr">
+        <div class="dash-kicker">Configuración General</div>
+        <div class="dash-hdr-title">Ajustes del Sistema</div>
+        <div class="dash-hdr-sub">${today()}</div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-title">Comisiones y Créditos</div>
+        <p class="config-desc">Configura los parámetros financieros clave que se aplican a los cálculos y validaciones de apuestas en tiempo real.</p>
+        
+        <div class="config-group">
+          <label class="config-label">Comisión de la Casa (%)</label>
+          <div class="config-input-wrapper">
+            <span class="config-input-prefix">%</span>
+            <input type="number" id="cfg-comision" class="config-input" min="0" max="100" value="${appConfig.comision_porcentaje}">
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">Límite de Crédito General ($)</label>
+          <div class="config-input-wrapper">
+            <span class="config-input-prefix">$</span>
+            <input type="number" id="cfg-limite" class="config-input" min="0" value="${appConfig.limite_credito}">
+          </div>
+        </div>
+
+        <div class="config-group">
+          <label class="config-label">PIN de Autorización del Supervisor</label>
+          <div class="config-input-wrapper">
+            <span class="config-input-prefix">🔑</span>
+            <input type="password" id="cfg-pin" class="config-input" value="${appConfig.pin_autorizacion}">
+          </div>
+        </div>
+
+        <button class="config-btn-save" onclick="saveConfig()">Guardar Ajustes</button>
+      </div>
+
+      <div class="config-card">
+        <div class="config-title" style="color:var(--rojo2);">Operaciones de Cierre y Reinicio</div>
+        <p class="config-desc">
+          Utiliza esta función al finalizar la jornada o semana. Actualiza los saldos de todos los apostadores a su balance actual y borra todas las peleas del sistema para comenzar una nueva jornada limpios.
+        </p>
+        <button class="config-btn-danger" onclick="confirmCierreCaja()">🏁 Realizar Cierre de Caja</button>
+      </div>
+    </div>
+  `;
+}
+
+async function saveConfig() {
+  const comision = parseFloat(document.getElementById('cfg-comision').value);
+  const limite = parseFloat(document.getElementById('cfg-limite').value);
+  const pin = document.getElementById('cfg-pin').value.trim();
+
+  if (isNaN(comision) || comision < 0 || comision > 100) {
+    toast('Comisión inválida. Debe ser entre 0 y 100.', 'error');
+    return;
+  }
+  if (isNaN(limite) || limite < 0) {
+    toast('Límite de crédito inválido.', 'error');
+    return;
+  }
+  if (!pin) {
+    toast('El PIN no puede estar vacío.', 'error');
+    return;
+  }
+
+  // Update in Supabase
+  const rows = [
+    { clave: 'comision_porcentaje', valor: comision.toString() },
+    { clave: 'limite_credito', valor: limite.toString() },
+    { clave: 'pin_autorizacion', valor: pin }
+  ];
+
+  let successCount = 0;
+  for (const row of rows) {
+    const { error } = await sb.from('configuraciones').upsert(row, { onConflict: 'clave' });
+    if (!error) successCount++;
+  }
+
+  if (successCount === rows.length) {
+    await logAction('config', `Configuración del sistema actualizada: Comisión ${comision}%, Límite $${limite}, PIN ${pin}`, '⚙️');
+    await refreshData();
+    toast('Configuración guardada correctamente.', 'success');
+  } else {
+    toast('Ocurrió un error al guardar la configuración.', 'error');
+  }
+}
+
+async function confirmCierreCaja() {
+  const ok = await showConfirm(
+    `<strong>¿Realizar Cierre de Caja / Corte de Jornada?</strong><br><br>` +
+    `<span style="font-size:12px;color:var(--text3);line-height:1.5;display:block;">` +
+    `Esta acción:<br>` +
+    `1. Calculará y guardará el balance de cada jugador como su nuevo <strong>Saldo Anterior</strong>.<br>` +
+    `2. <strong>Eliminará todas las peleas cerradas</strong> (y sus apuestas asociadas) del sistema para iniciar limpios.<br>` +
+    `3. Esta operación no se puede deshacer.</span>`,
+    '⚠️',
+    'Proceder al Cierre',
+    'danger'
+  );
+  if (!ok) return;
+
+  toast('Realizando cierre de caja...', 'info');
+
+  try {
+    // 1. Calculate balances and prepare batch update for jugadores
+    const updates = jugadores.map(j => {
+      const { saldo } = calcFicha(j);
+      return {
+        id: j.id,
+        nombre: j.nombre,
+        color: j.color,
+        saldo_anterior: parseFloat(saldo.toFixed(2))
+      };
+    });
+
+    const { error: jError } = await sb.from('jugadores').upsert(updates, { onConflict: 'id' });
+    if (jError) {
+      throw new Error(`Error actualizando jugadores: ${jError.message}`);
+    }
+
+    // 2. Delete closed fights
+    const { error: pError } = await sb.from('peleas').delete().eq('estado', 'cerrada');
+    if (pError) {
+      throw new Error(`Error eliminando peleas cerradas: ${pError.message}`);
+    }
+
+    // 3. Log to bitacora
+    await logAction('corte_jornada', `Corte de Jornada realizado: saldos actualizados y peleas cerradas archivadas`, '🏁');
+
+    toast('Cierre de caja completado con éxito.', 'success');
+    await refreshData();
+  } catch (err) {
+    console.error(err);
+    toast(`⚠️ Falló el cierre: ${err.message}`, 'error');
+  }
+}

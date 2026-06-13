@@ -39,6 +39,29 @@ let currentTab = '';
 let bitacora = [];
 let logFiltro = 'todos';
 
+// ── CONFIGURACIONES GLOBALES ──
+const appConfig = {
+  comision_porcentaje: 10,
+  limite_credito: 5000,
+  pin_autorizacion: '8888'
+};
+
+async function fetchConfig() {
+  try {
+    const { data, error } = await sb.from('configuraciones').select('*');
+    if (!error && data) {
+      data.forEach(row => {
+        if (row.clave === 'comision_porcentaje') appConfig.comision_porcentaje = parseFloat(row.valor) || 10;
+        if (row.clave === 'limite_credito') appConfig.limite_credito = parseFloat(row.valor) || 5000;
+        if (row.clave === 'pin_autorizacion') appConfig.pin_autorizacion = row.valor || '8888';
+      });
+    }
+  } catch (e) {
+    console.warn("No se pudo cargar la configuración de Supabase, usando locales:", e);
+  }
+}
+
+
 // ── XSS SANITIZATION ──
 function escapeHtml(str) {
   if (!str) return '';
@@ -99,11 +122,33 @@ async function initAuth() {
 }
 
 async function loadUsuarioFromAuth(authUserId) {
-  const { data, error } = await sb
+  let { data, error } = await sb
     .from('usuarios')
     .select('id, username, nombre_completo, rol')
     .eq('auth_id', authUserId)
     .maybeSingle();
+
+  // Si no se encuentra el perfil del usuario autenticado, intentar auto-vincular usando RPC
+  if (!error && !data) {
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user && user.email) {
+        const username = user.email.split('@')[0];
+        const { data: linked } = await sb.rpc('vincular_auth_id', { p_username: username });
+        if (linked) {
+          const res = await sb
+            .from('usuarios')
+            .select('id, username, nombre_completo, rol')
+            .eq('auth_id', authUserId)
+            .maybeSingle();
+          data = res.data;
+          error = res.error;
+        }
+      }
+    } catch (e) {
+      console.warn("Intento de auto-vinculación fallido:", e);
+    }
+  }
 
   if (error || !data) {
     console.error('Error loading user profile:', error);
@@ -242,7 +287,9 @@ async function fetchJugadores() {
                 monto,
                 resultado,
                 peleas (
-                    numero_pelea
+                    numero_pelea,
+                    estado,
+                    ganador
                 )
             )
         `);
@@ -260,7 +307,9 @@ async function fetchJugadores() {
       pelea: a.peleas?.numero_pelea || 0,
       monto: parseFloat(a.monto) || 0,
       bando: a.bando,
-      resultado: a.resultado
+      resultado: a.resultado,
+      peleaEstado: a.peleas?.estado || 'espera',
+      peleaGanador: a.peleas?.ganador || null
     })) : []
   }));
 }
@@ -288,20 +337,25 @@ async function fetchPeleas() {
     console.error("Error cargando peleas:", error);
     return;
   }
-  peleas = data.map(p => ({
-    id: p.id,
-    num: p.numero_pelea,
-    estado: p.estado,
-    ganador: p.ganador || undefined,
-    apuestas: p.apuestas ? p.apuestas.map(a => ({
-      id: a.id,
-      jugadorId: a.jugador_id,
-      nombre: a.jugadores?.nombre || 'Desconocido',
-      bando: a.bando,
-      monto: parseFloat(a.monto) || 0,
-      resultado: a.resultado
-    })) : []
-  }));
+  const oldPeleas = [...peleas];
+  peleas = data.map(p => {
+    const old = oldPeleas.find(o => o.num == p.numero_pelea);
+    return {
+      id: p.id,
+      num: p.numero_pelea,
+      estado: p.estado,
+      ganador: p.ganador || undefined,
+      minimizada: old ? old.minimizada : undefined,
+      apuestas: p.apuestas ? p.apuestas.map(a => ({
+        id: a.id,
+        jugadorId: a.jugador_id,
+        nombre: a.jugadores?.nombre || 'Desconocido',
+        bando: a.bando,
+        monto: parseFloat(a.monto) || 0,
+        resultado: a.resultado
+      })) : []
+    };
+  });
 }
 
 async function fetchBitacora() {
@@ -340,6 +394,7 @@ async function fetchBitacora() {
 // ── REFRESH DATA & REALTIME ──
 
 async function refreshData() {
+  await fetchConfig();
   await fetchJugadores();
   await fetchPeleas();
   await fetchBitacora();
@@ -364,8 +419,13 @@ async function refreshData() {
     if (currentTab === 'diario') renderPeriodo('diario');
     if (currentTab === 'semanal') renderPeriodo('semanal');
     if (currentTab === 'bitacora') renderBitacora();
+    if (currentTab === 'config') typeof renderConfig === 'function' && renderConfig();
   } else if (typeof renderPeleas === 'function') {
-    renderPeleas();
+    if (currentTab === 'peleas') renderPeleas();
+    if (currentTab === 'fichas') { if (typeof renderFicha === 'function') { renderFicha(); renderJugList(jugadores); } }
+    if (currentTab === 'diario') { if (typeof renderPeriodo === 'function') renderPeriodo('diario'); }
+    if (currentTab === 'semanal') { if (typeof renderPeriodo === 'function') renderPeriodo('semanal'); }
+    if (currentTab === 'bitacora') { if (typeof renderBitacora === 'function') renderBitacora(); }
   }
 }
 
@@ -375,6 +435,7 @@ function initRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'peleas' }, () => refreshData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'apuestas' }, () => refreshData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'jugadores' }, () => refreshData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'configuraciones' }, () => refreshData())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora' }, () => refreshData())
     .subscribe();
 }
@@ -412,13 +473,15 @@ async function eliminarPelea(num) {
 
 // ── CÁLCULO DE FICHA ──
 function calcFicha(j) {
+  const coef = 1 - (appConfig.comision_porcentaje / 100);
+
   const totalPerdidas = j.apuestas
     .filter(a => a.resultado === 'perdida')
     .reduce((s, a) => s + a.monto, 0);
 
   const totalGanadas = j.apuestas
     .filter(a => a.resultado === 'ganada')
-    .reduce((s, a) => s + (a.monto * 0.9), 0);
+    .reduce((s, a) => s + (a.monto * coef), 0);
 
   const saldoAntTotal = j.saldoAnt + totalPerdidas;
   const saldo = totalGanadas - saldoAntTotal;
@@ -427,7 +490,8 @@ function calcFicha(j) {
     saldo,
     ganadas: j.apuestas.filter(a => a.resultado === 'ganada'),
     perdidas: j.apuestas.filter(a => a.resultado === 'perdida'),
-    enJuego: j.apuestas.filter(a => a.resultado === 'pendiente'),
+    devueltas: j.apuestas.filter(a => a.resultado === 'devuelta' || (a.resultado === 'pendiente' && a.peleaEstado === 'cerrada')),
+    enJuego: j.apuestas.filter(a => a.resultado === 'pendiente' && a.peleaEstado !== 'cerrada'),
     totalGanadas,
     totalPerdidas,
     saldoAntTotal
@@ -541,6 +605,7 @@ const I = {
   stop: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
   file: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
   eye: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  eyeOff: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`,
   dg: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--green2)"/></svg>`,
   dr: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--rojo2)"/></svg>`,
   dy: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--gold)"/></svg>`,
@@ -549,6 +614,7 @@ const I = {
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', async () => {
   await initAuth();
+  await fetchConfig();
 
   const pBtn = document.getElementById('li-p');
   const uBtn = document.getElementById('li-u');

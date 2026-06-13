@@ -1,0 +1,178 @@
+# Walkthrough de Implementación: Mejoras en Gallo Gold
+
+Este documento resume los cambios realizados para implementar las mejoras de negocio, seguridad y usabilidad propuestas para el sistema de registro de apuestas.
+
+---
+
+## Cambios Realizados
+
+### 1. Base de Datos (`supabase_schema.sql` y `shared/shared.js`)
+* **Esquema de Base de Datos:** Se agregaron instrucciones de migración en la cabecera y se actualizó el archivo de esquema `supabase_schema.sql` para soportar:
+  * Ganadores `empate` y `anulada` en la tabla `peleas`.
+  * Resultados `devuelta` en la tabla `apuestas`.
+  * Tabla `configuraciones` para almacenar los parámetros globales (`comision_porcentaje`, `limite_credito`, `pin_autorizacion`).
+* **Variables y Sync Global (`shared.js`):**
+  * Se configuró el estado global `appConfig` y se implementó `fetchConfig()` para traer las configuraciones al inicio del DOM y con cada recarga de datos (`refreshData`).
+  * Se añadió una regla en tiempo real (Realtime Channel) para que cualquier cambio en la tabla `configuraciones` fuerce una recarga de datos en todas las pantallas.
+  * Se modificó `fetchJugadores` para traer el estado y ganador de la pelea para cada apuesta de manera relacional.
+  * Se actualizó `calcFicha(j)` para realizar el cálculo de ganancias utilizando la comisión dinámica (`appConfig.comision_porcentaje`) y excluir o tratar como reembolsadas (100% de devolución) las apuestas con resultado `devuelta` o de peleas cerradas sin ganador.
+
+### 2. Panel de Ajustes del Administrador (`admin/index.html`, `admin/admin.js`, `admin/admin.css`)
+* **Tab de Ajustes:** Se añadió la pestaña `Ajustes` en `TABS_ADMIN` con un icono de engranaje (disponible en teclado con la tecla `A`). Se creó el div `#tab-config` en `index.html`.
+* **Panel de Configuración:** Permite al Administrador:
+  1. Modificar la Comisión de la Casa (%).
+  2. Modificar el Límite de Crédito General ($).
+  3. Modificar el PIN de Autorización del Supervisor (para desbloquear sobregiros).
+* **Cierre de Caja (Corte de Jornada):**
+  * Se implementó el botón **Realizar Cierre de Caja** con una advertencia de confirmación.
+  * El proceso calcula el balance actual de cada jugador, lo guarda como su nuevo `saldo_anterior` en Supabase y **elimina todas las peleas cerradas** (con sus respectivas apuestas), reiniciando el sistema de manera limpia para la siguiente fecha de peleas.
+* **Estilos:** Se agregaron diseños limpios de tarjetas y campos de entrada en `admin.css`.
+* **Visualización de Resultados:** Se actualizó `buildPB` para mostrar badges informativos de **Empate** (dorado) o **Anulada** (gris) si la pelea se resolvió de esta manera.
+
+### 3. Registro de Apuestas y Control de Empleados (`empleado/empleado.js`)
+* **Fórmula de Cierre en Peleas:** En las tarjetas de pelea, se añadieron los botones **Empate** y **Anular** al lado de Verde y Rojo.
+  * Al seleccionar **Empate** o **Anular**, el sistema actualiza la pelea a `ganador = 'empate' | 'anulada'` y actualiza todas las apuestas de la pelea a `resultado = 'devuelta'`.
+* **Control de Límite de Crédito:**
+  * En el paso 4 (Confirmar) del modal de apuestas, si la apuesta pone el balance neto del jugador por debajo de `-appConfig.limite_credito` (ej. -$5,000), el modal muestra una advertencia en rojo brillante.
+  * Se bloquea la confirmación normal y se requiere que el empleado ingrese el **PIN de Supervisor** configurado (default: `8888`) para poder guardar la apuesta.
+  * Al autorizarse con PIN, se guarda un evento de alerta en la bitácora (`saldo-negativo`) detallando quién, cuánto y bajo qué autorización se realizó.
+
+---
+
+## ⚠️ Acción Requerida: Ejecutar Migración en Supabase
+
+Dado que Supabase restringe los cambios de esquema por seguridad y RLS, **debes copiar y ejecutar el siguiente fragmento SQL en el editor SQL de tu panel de Supabase**:
+
+```sql
+-- 1. Actualizar restricciones para admitir Empates y Cancelaciones
+ALTER TABLE public.peleas DROP CONSTRAINT IF EXISTS peleas_ganador_check;
+ALTER TABLE public.peleas ADD CONSTRAINT peleas_ganador_check CHECK (ganador IN ('verde', 'rojo', 'empate', 'anulada', NULL));
+
+ALTER TABLE public.apuestas DROP CONSTRAINT IF EXISTS apuestas_resultado_check;
+ALTER TABLE public.apuestas ADD CONSTRAINT apuestas_resultado_check CHECK (resultado IN ('pendiente', 'ganada', 'perdida', 'devuelta'));
+
+-- 2. Crear tabla de configuraciones del sistema
+CREATE TABLE IF NOT EXISTS public.configuraciones (
+    clave VARCHAR(50) PRIMARY KEY,
+    valor TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE public.configuraciones ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "configuraciones_select_auth" ON public.configuraciones FOR SELECT USING (get_user_role() IS NOT NULL);
+CREATE POLICY "configuraciones_write_admin" ON public.configuraciones FOR ALL USING (get_user_role() = 'admin');
+
+-- 3. Valores iniciales de configuración
+INSERT INTO public.configuraciones (clave, valor) VALUES 
+('comision_porcentaje', '10'),
+('limite_credito', '5000'),
+('pin_autorizacion', '8888')
+ON CONFLICT (clave) DO NOTHING;
+```
+
+---
+
+## 4. Rediseño Visual y UI/UX Premium (Fase Completada)
+
+Se ha implementado una capa estética premium sobre todo el sistema ("Gallo Gold — Bruno's") utilizando Vanilla CSS y micro-animaciones, logrando una interfaz moderna, limpia e intuitiva.
+
+### Estética Global y Layout
+* **Glassmorphic Navigation:** Se aplicó un efecto de vidrio esmerilado con desenfoque de fondo (`backdrop-filter: blur(16px)`) en el menú lateral de escritorio y en la barra de navegación móvil.
+* **Menú Móvil Flotante:** Se transformó el menú inferior rígido en una barra flotante ovalada con bordes redondeados (`border-radius: 16px`) y márgenes elegantes, al estilo de las aplicaciones nativas premium de iOS y Android.
+* **Scrollbars Personalizadas:** Se rediseñaron los scrollbars para que sean ultra finos, dorados y semi-transparentes, integrándose perfectamente al fondo oscuro de la aplicación.
+* **Orbes y Partículas de Fondo:** Se agregaron efectos visuales sutiles en la pantalla de inicio de sesión con orbes de color difuminados flotando en el fondo y un parpadeo sutil en la mirada del gallo de la marca.
+
+### Dashboard de Administrador
+* **Comparativa de Volumen VS (Anillo SVG):** Se implementó un indicador circular SVG centralizado con brillos intensos (glow) en color Rojo (`var(--rojo2)`) y Verde (`var(--green2)`) que representa visualmente el balance en juego en tiempo real entre ambos bandos.
+* **Podio de Mayor Actividad:** Los primeros tres lugares del ranking de mayor volumen operativo ahora muestran medallas estilizadas (**Oro 🥇**, **Plata 🥈**, y **Bronce 🥉**) con un sutil efecto de flotación animado.
+
+### Bloques de Pelea (PB - Fight Blocks)
+* **Glows de Estado Dinámicos:** En los botones segmentados de control de estado de la pelea (espera, activa, cerrada), se agregaron brillos y bordes de color dinámicos según el estado seleccionado:
+  * **Abierto (espera):** Brillo dorado (`rgba(201, 168, 76, 0.3)`)
+  * **En juego (activa):** Brillo verde esmeralda con una animación respiratoria pulsante (`rgba(46, 204, 113, 0.45)`)
+  * **Cerrado (cerrada):** Brillo rojo carmesí (`rgba(231, 76, 60, 0.3)`)
+* **Barra Proporcional tipo Cápsula:** Se rediseñaron las barras de progreso del volumen de pelea `.pelea-bar` para tener forma de cápsula redondeada, con sombreado interno 3D, degradados en los colores Rojo/Verde y una línea divisoria central flotante en la marca del 50%.
+
+### Modal Asistente de Apuestas (Empleado)
+* **Línea de Progreso con Ancho Animado:** Se modificó la estructura HTML para persistir el elemento de indicadores de pasos y la barra de progreso. La línea de progreso avanza suavemente con transiciones CSS de ancho (`width 0.35s cubic-bezier(0.4, 0, 0.2, 1)`) al pasar de un paso a otro sin parpadear ni destruirse.
+* **Botones de Monto Shimmer:** Se les añadió un efecto de brillo oblicuo ("shimmer effect") que se desplaza de izquierda a derecha al pasar el mouse/dedo sobre los botones de montos predefinidos (`.mab`).
+* **Monto Personalizado Gigante:** Se rediseñó el input de monto personalizado para mostrar la tipografía monospaced `JetBrains Mono` con un tamaño gigante de `26px`, color dorado, alineación centrada y brillo de enfoque para evitar errores de tipeo en entornos de alta velocidad.
+
+### 5. Acceso Multi-pestaña para Empleados y Auto-Mapeo de Auth ID (Últimos Cambios)
+* **Auto-Mapeo de Usuarios en Login (`shared.js`):**
+  * Se implementó una lógica auto-curativa en `loadUsuarioFromAuth`. Si un usuario inicia sesión pero su `auth_id` es `NULL` en la tabla `public.usuarios`, el cliente llama a la función SQL segura `vincular_auth_id` para asociar automáticamente su UID de Supabase Auth a su fila de base de datos de manera transparente.
+* **Pestañas Expandidas en Menú de Empleado (`index.html`, `empleado.js`):**
+  * Se añadieron los módulos **Fichas** (para consultar saldos e historial de apuestas de los apostadores), **Corte Día**, **Corte Semana** y **Auditoría** al panel del empleado, igualando las capacidades del panel de administrador pero con los controles de creación/cierre de peleas del empleado intactos.
+  * Se importó la biblioteca `jsPDF` en el panel de empleado para permitirles generar y descargar reportes individuales o masivos en PDF.
+  * Se implementó el Drawer móvil (`mob-drawer`) para la navegación fluida y la búsqueda de jugadores en smartphones para la vista de Fichas.
+* **Estilos y Responsive (`empleado.css`):**
+  * Se copiaron e integraron los estilos CSS de `.ficha-card`, `.mini-ficha`, `.log-entry` y sus respectivas consultas responsivas (`@media (max-width: 767px)`) desde `admin.css` a `empleado.css`.
+* **Sincronización de Realtime:**
+  * Se actualizó `refreshData` en `shared.js` para recargar correctamente el tab activo del empleado en tiempo real (si están en Fichas, Diario, Semanal o Auditoría) al recibir notificaciones de Supabase Realtime.
+
+---
+
+## 6. Optimización de Visualización, Orden y Cache-Busting (Fase de Usabilidad)
+
+Se implementaron cambios estructurales y lógicos en el ordenamiento y maquetación de las peleas para brindar una visualización despejada ("sin amontonamiento") y fácil de usar por el empleado.
+
+### Mejoras de Visualización y Layout
+* **Listado Vertical de una Columna:** Se reestructuró el contenedor de peleas `.peleas-scroll` en [empleado.css](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.css) y [admin.css](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.css) para mostrar las tarjetas en una sola columna vertical fluida centrada en pantalla, limitando el ancho máximo a `720px` (en empleado) y `760px` (en administrador). Esto elimina los problemas de huecos y deformaciones del CSS Grid anterior al expandirse las peleas.
+* **Resaltado de Pelea en Juego:** Se diseñó la clase `.pb.active-pelea-card` con bordes dorados brillantes y sombras de resplandor que destacan inmediatamente a la pelea activa ("En juego") del resto del listado.
+
+### Lógica y Ordenamiento por Estado
+* **Clasificación por Prioridad de Estado:** En [empleado.js](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.js) and [admin.js](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.js), se modificó la función `renderPeleas()` para ordenar las peleas dinámicamente:
+  1. Peleas **En juego / Activas** al tope de la lista con su respectivo resaltado dorado.
+  2. Peleas **Abiertas / En espera** en la sección media (ordenadas por número descendente).
+  3. Peleas **Cerradas** al final de la lista (ordenadas por número descendente).
+* **Expansión Inteligente por Defecto:** Al cargar el listado, las peleas activas y abiertas se muestran expandidas de forma predeterminada para que el empleado vea las apuestas activas y los totales, mientras que las peleas cerradas se muestran colapsadas automáticamente para reducir el ruido visual.
+
+### Persistencia y Cache-Busting
+* **Eliminación del Caché del Navegador:** Se añadieron parámetros de versión query-string (`?v=2`) en los archivos [index.html](file:///c:/Users/Ger11/Downloads/Gallos/index.html), [empleado/index.html](file:///c:/Users/Ger11/Downloads/Gallos/empleado/index.html) y [admin/index.html](file:///c:/Users/Ger11/Downloads/Gallos/admin/index.html) para forzar al navegador a descargar las versiones más recientes de los scripts JS en lugar de utilizar versiones almacenadas en caché.
+* **Preservación del Estado en Sync:** Se modificó la comparación en [shared.js](file:///c:/Users/Ger11/Downloads/Gallos/shared/shared.js) para asegurar un emparejamiento defensivo (`o.num == p.numero_pelea`), permitiendo que el estado de minimización manual de cada tarjeta de pelea se preserve sin interrupciones durante las actualizaciones en tiempo real y refrescos de Supabase.
+
+---
+
+## 7. Buscador Numérico de Peleas y Opción de Colapso por Defecto (Seguimiento)
+
+Se añadieron herramientas de búsqueda y configuraciones de colapso rápido a la barra de herramientas para facilitar la navegación cuando hay gran cantidad de peleas en una misma jornada.
+
+### Funcionalidades Añadidas
+* **Buscador de Pelea por Número:** Se añadió un campo numérico de búsqueda en la barra de herramientas. El listado se filtra instantáneamente en tiempo real al ingresar el número de la pelea. Se implementó una micro-interacción que mantiene el foco del teclado y la posición del cursor de manera fluida mientras se escribe.
+
+### Archivos Modificados
+* **JavaScript:**
+  * [empleado.js](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.js) (Lógica de búsqueda refocus y filtrado de array).
+  * [admin.js](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.js) (Lógica de búsqueda refocus y filtrado de array).
+* **CSS (Estilización):**
+  * [empleado.css](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.css) (Estilos para el contenedor de búsqueda `.p-search` y alineación vertical).
+  * [admin.css](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.css) (Estilos para el contenedor de búsqueda `.p-search` y alineación vertical).
+
+---
+
+## 8. Corrección de Errores: Desplazamiento de Listado y Limpieza de Interfaz
+
+Se resolvieron los tres errores reportados sobre la visualización recortada de las tarjetas, el bloqueo del scroll en el feed y la redundancia de opciones en la barra de herramientas.
+
+### Correcciones de Usabilidad y Maquetación
+* **Solución al Recorte de Tarjetas (`flex-shrink: 0`):** Se añadió la propiedad `flex-shrink: 0;` a la clase `.pb` en [empleado.css](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.css) y [admin.css](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.css). Esto evita que el navegador encoja las tarjetas de peleas para meterlas a la fuerza en el contenedor, lo cual causaba que el botón de **Registrar apuesta** y los detalles de pago se recortaran y desaparecieran.
+* **Habilitación de Desplazamiento (Scroll):** Al deshabilitar el encogimiento de las tarjetas, éstas recuperan su tamaño natural de visualización, provocando un desborde natural del contenedor. Al combinarse con las restricciones de altura global añadidas a `.tab-content` en [shared.css](file:///c:/Users/Ger11/Downloads/Gallos/shared/shared.css), el contenedor `.peleas-scroll` ahora genera y muestra su barra de scroll vertical de manera nativa y responde al desplazamiento del cursor y mouse.
+* **Eliminación de Redundancia:** Se removió la casilla de verificación "Colapsar por defecto" (tanto de las plantillas HTML de las barras de herramientas como de la lógica JS), ya que duplicaba la funcionalidad de los botones **Exp. todo** y **Col. todo**.
+  * Se restableció la regla por defecto en [empleado.js](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.js) y [admin.js](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.js): las peleas cerradas cargan colapsadas por defecto, mientras que las abiertas y activas cargan expandidas, pudiendo el usuario alterarlo con un solo clic con los botones dedicados.
+
+---
+
+## 9. Distribución en Dos Columnas (Grid Flexible) en Pantallas Grandes
+
+Para aprovechar mejor el espacio en pantallas de escritorio y tablets, se reestructuró la visualización del listado de peleas para que las tarjetas se organicen de forma lateral (en dos o tres columnas según el ancho de pantalla disponible) y luego hacia abajo.
+
+### Detalles de la Implementación
+* **Uso de CSS Grid en `.peleas-scroll`:**
+  * Se configuró `display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));` tanto en [empleado.css](file:///c:/Users/Ger11/Downloads/Gallos/empleado/empleado.css) como en [admin.css](file:///c:/Users/Ger11/Downloads/Gallos/admin/admin.css).
+  * Esto permite que en pantallas anchas las peleas se organicen de forma automática en múltiples columnas, y que en pantallas móviles de menos de 767px colapsen automáticamente a una sola columna vertical.
+* **Alineación al Inicio (`align-items: start`):**
+  * Se añadió `align-items: start;` y `justify-content: center;` para evitar que las tarjetas colapsadas (de menor altura) se estiren verticalmente al lado de tarjetas expandidas en la misma fila del grid, manteniendo sus proporciones naturales.
+
+### Captura de Pantalla
+![Vista de Peleas en Grid de Dos Columnas en el Panel de Administrador](/eliaglz_peleas_grid_1781388688545.png)
