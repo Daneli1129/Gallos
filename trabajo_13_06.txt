@@ -4,7 +4,7 @@ Este documento resume los cambios realizados para implementar las mejoras de neg
 
 ---
 
-## Cambios Realizados
+## Cambios Realizados 
 
 ### 1. Base de Datos (`supabase_schema.sql` y `shared/shared.js`)
 * **Esquema de Base de Datos:** Se agregaron instrucciones de migración en la cabecera y se actualizó el archivo de esquema `supabase_schema.sql` para soportar:
