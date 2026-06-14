@@ -6,7 +6,6 @@
 <title>Gallo Gold — Empleado</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="../shared/supabase.umd.js"></script>
-<script src="../shared/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="../shared/shared.css">
 <link rel="stylesheet" href="empleado.css">
 </head>
@@ -75,43 +74,6 @@
         </button>
       </div>
 
-      <!-- TAB: FICHAS -->
-      <div class="tab-content" id="tab-fichas">
-        <div style="display:flex; height:100%;">
-          
-          <div class="panel-list" id="panel-list">
-            <div class="panel-list-head">
-              <div class="pl-label">Jugadores</div>
-              <div class="search-box">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="search-inp" placeholder="Buscar jugador..." oninput="filterJug()">
-              </div>
-            </div>
-            <div class="list-scroll" id="jugadores-list"></div>
-          </div>
-
-          <div class="scroll-area" style="position:relative;">
-            
-            <div class="mob-jug-btn-wrap">
-              <button class="mob-jug-btn" onclick="openDrawer()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-                </svg>
-                Seleccionar Jugador
-              </button>
-            </div>
-
-            <div id="ficha-detail" style="display:none;"></div>
-            
-            <div id="fichas-empty" class="empty-center">
-              <div class="er">👤</div>
-              <p>Selecciona un jugador para ver su ficha</p>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
       <!-- TAB: PELEAS -->
       <div class="tab-content" id="tab-peleas">
         <div class="peleas-wrap">
@@ -120,20 +82,7 @@
         </div>
       </div>
 
-      <!-- TAB: DIARIO -->
-      <div class="tab-content" id="tab-diario">
-        <div class="scroll-area" id="diario-wrap"></div>
-      </div>
 
-      <!-- TAB: SEMANAL -->
-      <div class="tab-content" id="tab-semanal">
-        <div class="scroll-area" id="semanal-wrap"></div>
-      </div>
-
-      <!-- TAB: BITACORA -->
-      <div class="tab-content" id="tab-bitacora">
-        <div class="scroll-area" id="log-wrap"></div>
-      </div>
 
     </div><!-- /detail -->
   </div><!-- /main -->
@@ -165,25 +114,7 @@
     </div>
   </div>
 
-  <div class="mob-drawer" id="mob-drawer">
-    <div class="mob-drawer-overlay" onclick="closeDrawer()"></div>
-    <div class="mob-drawer-panel" onclick="event.stopPropagation()">
-      <div class="mob-drawer-handle"></div>
-      <div class="mob-drawer-head">
-        <div class="mob-drawer-title">📋 Lista de Jugadores</div>
-        <button class="mob-drawer-close" onclick="closeDrawer()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div style="padding:12px; border-bottom: 1px solid var(--border);">
-        <div class="search-box">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="mob-search" placeholder="Buscar jugador..." oninput="filterJugMob()">
-        </div>
-      </div>
-      <div class="mob-drawer-body" id="mob-jug-list"></div>
-    </div>
-  </div>
+
 
 </div><!-- /app-shell -->
 

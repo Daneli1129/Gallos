@@ -104,6 +104,27 @@ function setTab(tab) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
+/* Animación contadora para dashboard */
+function counterStart() {
+  document.querySelectorAll('.dash-card-val, .dash-comision-val, .dash-flow-val').forEach(el => {
+    const raw = el.textContent.trim();
+    const num = parseFloat(raw.replace(/[$,]/g, ''));
+    if (isNaN(num)) return;
+    const isCurrency = raw.includes('$');
+    const dur = 600 + Math.min(num, 50000) * .008;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min((now - start) / dur, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const cur = Math.round(num * ease);
+      el.textContent = isCurrency ? fmt(cur) : cur;
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = raw;
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
 function renderDashboard() {
   const el = document.getElementById('dash-wrap');
 
@@ -293,6 +314,7 @@ function renderDashboard() {
         </div>
       </div>
     </div>`;
+  requestAnimationFrame(() => counterStart());
 }
 
 // ── DRAWER MÓVIL ──────────────────────────────────────────
@@ -542,7 +564,11 @@ function renderPeleas() {
     }</div>`;
     return;
   }
-  lista.forEach(p => sc.appendChild(buildPB(p)));
+  lista.forEach((p, i) => {
+    const el = buildPB(p);
+    el.style.setProperty('--i', i);
+    sc.appendChild(el);
+  });
 }
 
 function renderToolbar() {
@@ -573,16 +599,16 @@ function renderToolbar() {
           <span class="pf-cnt">${f.count}</span>
         </button>`).join('')}
     </div>
-    <div class="estado-group">
-      <button class="btn-estado" onclick="expandirTodas()" title="Expandir todas las peleas">
-        ${I.eye} <span class="etxt">Exp. todo</span>
+    <div class="view-ctrls">
+      <button class="vc-btn" onclick="expandirTodas()" title="Expandir todas">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>
       </button>
-      <button class="btn-estado" onclick="colapsarTodas()" title="Colapsar todas las peleas">
-        ${I.eyeOff} <span class="etxt">Col. todo</span>
+      <button class="vc-btn" onclick="colapsarTodas()" title="Colapsar todas">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 9 12 15 6 9"/></svg>
       </button>
     </div>
     <div class="ctrl-sep"></div>
-    <div class="admin-ro">${I.eye} Admin / solo lectura</div>`;
+    <span class="ro-badge">Solo lectura</span>`;
 }
 
 function expandirTodas() {
@@ -616,13 +642,6 @@ function buildPB(p) {
     ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
     : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-  const estadoBtns = `
-    <div class="pb-state-group">
-      <span class="pb-st${p.estado === 'espera' ? ' active-e' : ''}">${I.pause}</span>
-      <span class="pb-st${p.estado === 'activa' ? ' active-a' : ''}">${I.play}</span>
-      <span class="pb-st${p.estado === 'cerrada' ? ' active-c' : ''}">${I.stop}</span>
-    </div>`;
-
   let winnerTag = '';
   if (p.ganador) {
     if (p.ganador === 'empate') {
@@ -642,13 +661,6 @@ function buildPB(p) {
   } else if (p.estado === 'cerrada') {
     winnerTag = `<div class="pb-winner" style="opacity:.4;">Sin resultado</div>`;
   }
-
-  const delBtn = `
-      <button class="pb-del-btn" onclick="event.stopPropagation();confirmEliminarPelea(${p.num})" title="Eliminar pelea">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-      </svg>
-    </button>`;
 
   const buildRows = lista => lista.length
     ? lista.map(a => {
@@ -676,8 +688,6 @@ function buildPB(p) {
         <span class="pb-total">${fmt(total)} <span style="font-size:9px;color:var(--text3);font-weight:700;">VOL</span></span>
       </div>
       <div class="pb-head-r">
-        ${estadoBtns}
-        ${delBtn}
         <span class="pb-chev">${chevron}</span>
       </div>
     </div>
@@ -707,15 +717,6 @@ function buildPB(p) {
         </div>
       </div>`}`;
   return div;
-}
-
-async function confirmEliminarPelea(pN) {
-  const p = getPelea(pN);
-  if (!p) return;
-  const ok = await showConfirm(`¿Eliminar <strong>Pelea #${pN}</strong>?<br><span style="font-size:12px;color:var(--text3);">Se borrarán todas las apuestas asociadas. Esta acción no se puede deshacer.</span>`, '×', 'Eliminar', 'danger');
-  if (!ok) return;
-  await eliminarPelea(pN);
-  renderPeleas();
 }
 
 // ── DIARIO / SEMANAL ──────────────────────────────────────
@@ -897,146 +898,209 @@ function setLogF(f) { logFiltro = f; renderBitacora(); }
 function buildPDF(j, tipo) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-  const W = 215.9, mg = 20;
+  const W = 215.9, mg = 18;
   let y = mg;
 
-  const { saldo, ganadas, perdidas, totalGanadas, totalPerdidas } = calcFicha(j);
+  // Colores de marca
+  const gold = [201, 168, 76];
+  const goldLight = [232, 201, 122];
+  const ember = [212, 56, 13];
+  const dark = [20, 18, 14];
+  const mid = [100, 100, 100];
+  const light = [150, 150, 150];
+  const bgLight = [248, 246, 242];
 
-  // Encabezado principal
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(204, 0, 0); 
-  doc.text("GALLO GOLD BRUNO'S", W / 2, y, { align: 'center' });
-  
-  y += 6;
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.setFont('helvetica', 'normal');
-  doc.text("Control de Apuestas", W / 2, y, { align: 'center' });
-  
-  y += 5;
-  doc.text(`${today()}`, W / 2, y, { align: 'center' });
-  
-  y += 14;
-  
-  // Datos del apostador
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0);
-  doc.text(`APOSTADOR: ${j.nombre.toUpperCase()}`, mg, y);
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`ID: ${j.id}`, W - mg, y, { align: 'right' });
-  
+  const { saldo, ganadas, perdidas, totalGanadas, totalPerdidas } = calcFicha(j);
+  const periodoMayus = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+
+  // ─── ENCABEZADO ───
+  // Línea dorada superior
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(1.5);
+  doc.line(mg, y, W - mg, y);
   y += 8;
 
-  // Tabla de Peleas (Encabezados)
-  const cW = (W - mg * 2) / 2; 
-  
-  doc.setFillColor(204, 0, 0);
-  doc.rect(mg, y, cW, 8, 'F');
-  doc.setFillColor(34, 197, 94);
-  doc.rect(mg + cW, y, cW, 8, 'F');
-  
+  // Título principal
+  doc.setFont('times', 'bold');
+  doc.setFontSize(28);
+  doc.setTextColor(...dark);
+  doc.text('GALLO GOLD', W / 2, y, { align: 'center' });
+  y += 7;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...mid);
+  doc.text('BRUNO\'S · CONTROL DE APUESTAS', W / 2, y, { align: 'center' });
+  y += 5;
+  doc.setFontSize(8);
+  doc.setTextColor(...light);
+  doc.text(`${today()} · Corte ${periodoMayus}`, W / 2, y, { align: 'center' });
+  y += 6;
+
+  // Línea dorada inferior
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(.5);
+  doc.line(mg, y, W - mg, y);
+  y += 10;
+
+  // ─── DATOS DEL APOSTADOR ───
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(...dark);
+  doc.text(j.nombre.toUpperCase(), mg, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...mid);
+  doc.text(`ID: ${j.id} · ${j.apuestas.length} apuestas`, W - mg, y, { align: 'right' });
+  y += 4;
+  doc.setFontSize(8);
+  doc.setTextColor(...light);
+  doc.text(`Saldo anterior: ${fmt(j.saldoAnt)}`, mg, y);
+  y += 10;
+
+  // ─── TABLA DE PELEAS ───
+  const colW = (W - mg * 2) / 2;
+  const rowH = 6.5;
+  const padX = 4;
+
+  // Encabezados de tabla
+  const th = 7.5;
+  doc.setFillColor(...dark);
+  doc.rect(mg, y, colW, th, 'F');
+  doc.setFillColor(...dark);
+  doc.rect(mg + colW, y, colW, th, 'F');
+
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text("PERDIDAS", mg + cW / 2, y + 5.5, { align: 'center' });
-  doc.text("GANADAS", mg + cW + cW / 2, y + 5.5, { align: 'center' });
-  
-  y += 8;
-  
-  // Tabla de Peleas (Filas)
+  doc.setFontSize(9);
+  doc.text('PERDIDAS', mg + colW / 2, y + 5, { align: 'center' });
+  doc.text('GANADAS', mg + colW + colW / 2, y + 5, { align: 'center' });
+  y += th;
+
+  // Filas
   const maxR = Math.max(perdidas.length, ganadas.length, 1);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(9);
+
   for (let i = 0; i < maxR; i++) {
     const p = perdidas[i];
     const g = ganadas[i];
-    
+
     if (i % 2 === 0) {
-      doc.setFillColor(245, 245, 245);
-      doc.rect(mg, y, W - mg * 2, 7, 'F');
+      doc.setFillColor(...bgLight);
+      doc.rect(mg, y, W - mg * 2, rowH, 'F');
     }
-    
-    doc.setTextColor(0, 0, 0);
+
+    // Borde sutil entre filas
+    doc.setDrawColor(230, 228, 224);
+    doc.setLineWidth(.3);
+    doc.line(mg, y, W - mg, y);
+
+    doc.setTextColor(...dark);
+
+    // Columna Perdidas
     if (p) {
-      doc.text(`P ${p.pelea}`, mg + 4, y + 5);
-      doc.text(fmt(p.monto), mg + cW - 4, y + 5, { align: 'right' });
+      doc.text(`#${p.pelea}`, mg + padX, y + 4.5);
+      doc.text(fmt(p.monto), mg + colW - padX, y + 4.5, { align: 'right' });
     } else {
-      doc.text("—", mg + cW / 2, y + 5, { align: 'center' });
+      doc.setTextColor(200, 200, 200);
+      doc.text('—', mg + colW / 2, y + 4.5, { align: 'center' });
+      doc.setTextColor(...dark);
     }
-    
+
+    // Columna Ganancias
     if (g) {
-      doc.text(`P ${g.pelea}`, mg + cW + 4, y + 5);
-      doc.text(fmt(g.monto * 0.9), mg + cW * 2 - 4, y + 5, { align: 'right' });
+      doc.text(`#${g.pelea}`, mg + colW + padX, y + 4.5);
+      doc.text(fmt(g.monto * 0.9), mg + colW * 2 - padX, y + 4.5, { align: 'right' });
     } else {
-      doc.text("—", mg + cW + cW / 2, y + 5, { align: 'center' });
+      doc.setTextColor(200, 200, 200);
+      doc.text('—', mg + colW + colW / 2, y + 4.5, { align: 'center' });
+      doc.setTextColor(...dark);
     }
-    
-    y += 7;
-    
-    if (y > 250) {
+
+    y += rowH;
+
+    if (y > 255) {
       doc.addPage();
       y = mg;
     }
   }
-  
-  y += 10;
 
-  // Bloque de Totales
-  const w3 = (W - mg * 2) / 3;
-  doc.setFillColor(40, 40, 40);
-  doc.rect(mg, y, W - mg * 2, 8, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text("SALDO ANTERIOR", mg + w3 / 2, y + 5.5, { align: 'center' });
-  doc.text("TOTAL PERDIDAS", mg + w3 + w3 / 2, y + 5.5, { align: 'center' });
-  doc.text("TOTAL GANADAS", mg + w3 * 2 + w3 / 2, y + 5.5, { align: 'center' });
-  
-  y += 8;
-  
-  doc.setFillColor(245, 245, 245);
-  doc.rect(mg, y, W - mg * 2, 10, 'F');
-  
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.text(fmt(j.saldoAnt), mg + w3 / 2, y + 6.5, { align: 'center' });
-  doc.text(fmt(totalPerdidas), mg + w3 + w3 / 2, y + 6.5, { align: 'center' });
-  doc.text(fmt(totalGanadas), mg + w3 * 2 + w3 / 2, y + 6.5, { align: 'center' });
-  
-  y += 20;
-
-  // Resultado y Saldo Final
-  const isWin = saldo >= 0;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text("SALDO FINAL", mg, y + 8);
-  
-  doc.setFontSize(22);
-  doc.setTextColor(isWin ? 34 : 204, isWin ? 197 : 0, isWin ? 94 : 0);
-  doc.text(`${isWin ? '+' : '-'} ${fmt(Math.abs(saldo))}`, W / 2, y + 8, { align: 'center' });
-  
-  doc.setFontSize(14);
-  doc.text(`RESULTADO: ${isWin ? 'GANA' : 'PIERDE'}`, W - mg, y + 8, { align: 'right' });
-  
-  y += 18;
-  doc.setDrawColor(200, 200, 200);
+  // Línea final de tabla
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(.7);
   doc.line(mg, y, W - mg, y);
-  
   y += 8;
-  
-  // Pie de página
-  const periodoMayus = tipo.charAt(0).toUpperCase() + tipo.slice(1);
-  doc.setFont('helvetica', 'normal');
+
+  // ─── RESUMEN ───
+  const sumW = (W - mg * 2) / 3;
+
+  // Fondo oscuro del resumen
+  doc.setFillColor(...dark);
+  doc.rect(mg, y, W - mg * 2, 8, 'F');
+
+  doc.setTextColor(...goldLight);
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(150, 150, 150);
-  doc.text(`Gallo Gold Bruno's Corte ${periodoMayus} Generado automáticamente`, W / 2, y, { align: 'center' });
+  doc.text('SALDO ANTERIOR', mg + sumW / 2, y + 5, { align: 'center' });
+  doc.text('TOTAL PERDIDAS', mg + sumW + sumW / 2, y + 5, { align: 'center' });
+  doc.text('TOTAL GANADAS', mg + sumW * 2 + sumW / 2, y + 5, { align: 'center' });
+  y += 8;
+
+  doc.setFillColor(...bgLight);
+  doc.rect(mg, y, W - mg * 2, 9, 'F');
+
+  doc.setTextColor(...dark);
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(10);
+  doc.text(fmt(j.saldoAnt), mg + sumW / 2, y + 6, { align: 'center' });
+  doc.text(fmt(totalPerdidas), mg + sumW + sumW / 2, y + 6, { align: 'center' });
+  doc.text(fmt(totalGanadas), mg + sumW * 2 + sumW / 2, y + 6, { align: 'center' });
+  y += 18;
+
+  // ─── SALDO FINAL ───
+  const isWin = saldo >= 0;
+  const resultColor = isWin ? [34, 180, 90] : [212, 56, 13];
+
+  // Línea divisoria
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(.5);
+  doc.line(mg, y, W - mg, y);
+  y += 8;
+
+  // Etiqueta
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...mid);
+  doc.text('SALDO FINAL', mg, y + 6);
+
+  // Valor grande
+  doc.setFont('times', 'bold');
+  doc.setFontSize(24);
+  doc.setTextColor(...resultColor);
+  doc.text(`${isWin ? '+' : '−'}${fmt(Math.abs(saldo))}`, W / 2, y + 6, { align: 'center' });
+
+  // Resultado tag
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...light);
+  doc.text(isWin ? 'UTILIDAD' : 'PÉRDIDA', W - mg, y + 6, { align: 'right' });
+
+  y += 16;
+
+  // ─── PIE DE PÁGINA ───
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(.5);
+  doc.line(mg, y, W - mg, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...light);
+  doc.text('Gallo Gold · Bruno\'s', mg, y);
+  doc.text(`Reporte generado el ${today()}`, W - mg, y, { align: 'right' });
+  y += 3.5;
+  doc.setTextColor(190, 188, 184);
+  doc.text('Control de Apuestas · Corte ' + periodoMayus, W / 2, y, { align: 'center' });
 
   return doc;
 }

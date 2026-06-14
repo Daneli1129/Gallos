@@ -184,8 +184,137 @@ ARCHIVOS: empleado/empleado.js, empleado/empleado.css
 ARCHIVOS: admin/admin.css, empleado/empleado.css, shared/shared.css
 
 --------------------------------------------------------------
-ARCHIVOS MODIFICADOS (13/JUN)
+11. Admin — Animaciones premium + vivacidad
 --------------------------------------------------------------
+PROBLEMA: La app se sentía estática después del login animado.
+
+SOLUCIÓN:
+shared/shared.css:
+- Nueva variable --ember (#D4380D) con variantes semitransparentes
+- body::before animado con @keyframes bgBreathe (opacity+scale loop 8s)
+- @keyframes cardIn con cubic-bezier: translateY(16px)+scale(.97) → identity
+- @keyframes emberGlow para el glow rojo-anaranjado en cards
+- Entrada de cards con stagger via animation-delay: calc(var(--i,0)*50ms)
+- Toast mejorado: scale(.92)→scale(1), glow en box-shadow
+- Nav activo: glow extendido con 40px blur radial
+
+admin/admin.js:
+- counterStart(): animación contadora para números del dashboard
+  (easing cúbico, soporta formato moneda y planos)
+- Stagger en peleas: buildPB(p) recibe style="--i: N"
+
+admin/admin.css:
+- .pb.active-pelea-card animado con @keyframes activeCardPulse
+  (border-color+box-shadow respiran entre gold/gold2 en 3s)
+- ::after en active cards: fondo degrada a ember con emberGlow
+- Dashboard: animación cardIn cubic-bezier con delays por nth-child
+- .dash-comision: ::after con línea ember-gold animada
+
+empleado/empleado.js:
+- Stagger en peleas: style="--i: N" en buildPB(p)
+
+empleado/empleado.css:
+- .pb.active-pelea-card animado con activeCardPulse
+- ::after en active cards: fondo con ember + emberGlow
+
+ARCHIVOS: shared/shared.css, admin/admin.js, admin/admin.css,
+          empleado/empleado.js, empleado/empleado.css
+
+--------------------------------------------------------------
+12. Admin Toolbar — Botones feos renovados + modo solo lectura
+--------------------------------------------------------------
+PROBLEMA: Los botones "Exp. todo" / "Col. todo" eran botones sin
+          CSS (btn-estado) que rompían la estética premium.
+          Los admins no necesitan borrar/pausar peleas (solo lectura).
+
+SOLUCIÓN:
+Toolbar:
+- Se reemplazaron los botones btn-estado por view-ctrls con íconos
+  de chevron (▴/▾) estilo filtros: mismo surface, borde, hover gold
+- admin-ro (píldora azul "Admin / solo lectura") → ro-badge gris
+
+Read-only en tarjetas de pelea:
+- Eliminados estadoBtns (play/pause/stop) del buildPB
+- Eliminado delBtn (eliminar pelea) del buildPB
+- Eliminada función confirmEliminarPelea (código muerto)
+- Eliminado CSS muerto: pb-state-group, pb-st, pb-del-btn,
+  @keyframes activePlayPulse, variantes responsive (~60 líneas)
+- Se conservó toggleMin (expandir/colapsar = acción de lectura)
+
+ARCHIVOS: admin/admin.js, admin/admin.css
+
+--------------------------------------------------------------
+13. Login Redesign — Emblema, brasas, latido, card premium
+--------------------------------------------------------------
+PROBLEMA: El login era genérico-dark-saas. Sin alma de arena.
+
+SOLUCIÓN:
+shared/shared.css:
+- Gallo: 56px→80px, glow aumentado 30px→40px
+- Marca: tracking 4px→3px, text-shadow agregado (efecto repujado)
+- "bruno's" más integrado (tracking 5→4, font-size 11→10)
+- Card: padding superior 28px→32px, gap 26→24
+- Texto redundante reemplazado por .l-emblem "Apuestas en vivo"
+- Nuevo .l-ember: linear-gradient oro/ember en la base del card
+
+index.html (inline <style>):
+- @keyframes latidoEmblema: drop-shadow+brillo pulsa cada 4s
+- Partículas→brasas: 24 partículas, colores oro/ascua(#D4380D)/
+  blanco cálido, tamaño 1-4px, mix-blend-mode:screen,
+  animación "brasa" más lenta (80-240s)
+- Nuevo .btn-flash con radial-gradient que sigue el click position
+- Orbe 2 cambiado de verde a ember para mantener paleta
+- SVG gallo restaurado al original (posteriormente revertido por
+  solicitud del usuario)
+- Animaciones reajustadas: rooster-body 6s, latidoEmblema 4s
+
+index.html (JS):
+- Partículas: 12→24, colores oro/ascua/dorado claro/blanco
+- Ripple conservado + flash dorado añadido al botón
+
+ARCHIVOS: shared/shared.css, index.html
+
+--------------------------------------------------------------
+14. Login — Franjas doradas laterales en el card
+--------------------------------------------------------------
+PROBLEMA: El usuario pidió bordes dorados más visibles a los costados.
+
+SOLUCIÓN:
+shared/shared.css:
+- Nuevos .l-border-l y .l-border-r: líneas verticales 2px con
+  gradiente 180deg (transparent→gold→gold2→gold→transparent)
+- van del 8% superior al 8% inferior del card = 84% altura
+- Animación lateralGlow: opacidad .2↔.45 en 4s
+- .l-card::before mejorado con animation: brilloBorde desde
+  shared.css (antes solo en inline style)
+
+ARCHIVOS: shared/shared.css, index.html
+
+--------------------------------------------------------------
+15. PDF — Rediseño completo del layout de los reportes
+--------------------------------------------------------------
+PROBLEMA: El PDF usaba helvetica plana, headers rojo/verde básicos,
+          grises genéricos, sin personalidad de marca.
+
+SOLUCIÓN:
+admin/admin.js (buildPDF):
+- Título: Times bold 28pt "GALLO GOLD" con doble línea dorada
+- Subtítulo: Helvetica "BRUNO'S · CONTROL DE APUESTAS"
+- Courier para datos tabulares (analógico al JetBrains Mono web)
+- Encabezados de tabla: fondo dark con texto blanco
+- Filas: courier monoespaciado, bordes sutiles entre filas
+- Resumen: fondo dark con texto goldLight
+- Saldo final: Times bold 24pt, color verde/ember según resultado
+- Divisores gold en encabezado, tabla, resumen y pie
+- Colores de marca: gold [201,168,76], ember [212,56,13],
+  dark [20,18,14]
+- Pie profesional: "Gallo Gold · Bruno's" + fecha + tipo de corte
+
+ARCHIVOS: admin/admin.js
+
+==============================================================
+ARCHIVOS MODIFICADOS (13/JUN — SESIÓN COMPLETA)
+==============================================================
 - index.html
 - admin/admin.js
 - admin/admin.css

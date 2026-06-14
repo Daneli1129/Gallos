@@ -76,12 +76,32 @@
 }
 .pf-btn.active .pf-cnt { opacity: 1; color: var(--text2); }
 
-.admin-ro {
-  background: var(--blue-bg); border: 1px solid var(--blue-bdr);
-  color: var(--blue2); padding: 5px 12px; border-radius: 20px;
-  font-size: 10px; font-weight: 700;
+/* Control expandir/colapsar */
+.view-ctrls {
+  display: flex; gap: 2px;
+  background: var(--s1); padding: 2px;
+  border-radius: 6px; border: 1px solid var(--border);
+  margin: 0 2px;
+}
+.vc-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 4px; border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text3);
+  transition: background .12s, color .12s;
+}
+.vc-btn:hover { background: rgba(201,168,76,.1); color: var(--gold); }
+.ro-badge {
+  color: var(--text3);
+  font-size: 10px; font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
-  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--s1);
+  white-space: nowrap;
 }
 /* Buscador de pelea */
 .p-search {
@@ -167,14 +187,23 @@
 .pb.active-pelea-card {
   border-color: var(--gold);
   box-shadow: 0 8px 32px rgba(201, 168, 76, 0.18), 0 0 0 1px rgba(201, 168, 76, 0.25) inset;
+  animation: activeCardPulse 3s ease-in-out infinite;
+}
+@keyframes activeCardPulse {
+  0%, 100% { border-color: var(--gold); box-shadow: 0 8px 32px rgba(201,168,76,.18), 0 0 0 1px rgba(201,168,76,.25) inset; }
+  50% { border-color: var(--gold2); box-shadow: 0 8px 40px rgba(201,168,76,.28), 0 0 0 1px rgba(201,168,76,.35) inset; }
 }
 .pb.active-pelea-card::before {
   background: linear-gradient(90deg, transparent 0%, #E8C97A 20%, #C9A84C 40%, #E8C97A 60%, transparent 80%);
   opacity: 1;
 }
+.pb.active-pelea-card::after {
+  background: linear-gradient(145deg, rgba(255,255,255,.045), transparent 36%, rgba(212,56,13,.15));
+  animation: emberGlow 2.5s ease-in-out infinite;
+}
 .pb.active-pelea-card:hover {
   border-color: var(--gold2);
-  box-shadow: 0 12px 40px rgba(201, 168, 76, 0.26), 0 0 0 1px rgba(201, 168, 76, 0.3) inset;
+  box-shadow: 0 12px 40px rgba(201,168,76,.26), 0 0 0 1px rgba(201,168,76,.3) inset;
 }
 
 /* Head de pelea */
@@ -376,76 +405,6 @@
   font-weight: 800;
   margin-left: auto;
 }
-
-/* Controles de estado inline (solo visual) */
-.pb-state-group {
-  display: inline-flex;
-  gap: 2px;
-  background: var(--s1);
-  padding: 2px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
-.pb-st {
-  width: 26px;
-  height: 24px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text3);
-  padding: 0;
-  flex-shrink: 0;
-  transition: background .15s, color .15s, box-shadow .15s, border-color .15s;
-  cursor: pointer;
-}
-.pb-st svg { width: 12px; height: 12px; }
-.pb-st.active-e {
-  background: var(--gold-bg);
-  color: var(--gold);
-  border-color: rgba(201, 168, 76, 0.35);
-  box-shadow: 0 0 10px rgba(201, 168, 76, 0.3);
-}
-.pb-st.active-a {
-  background: var(--green-bg);
-  color: var(--green2);
-  border-color: rgba(46, 204, 113, 0.35);
-  animation: activePlayPulse 2s infinite ease-in-out;
-}
-.pb-st.active-c {
-  background: var(--rojo-bg);
-  color: var(--rojo2);
-  border-color: rgba(231, 76, 60, 0.35);
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);
-}
-@keyframes activePlayPulse {
-  0%, 100% {
-    box-shadow: 0 0 6px rgba(46, 204, 113, 0.25);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(46, 204, 113, 0.55);
-  }
-}
-
-/* Botón eliminar pelea */
-.pb-del-btn {
-  width: 26px;
-  height: 24px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  color: var(--text3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .12s, color .12s, box-shadow .12s;
-  flex-shrink: 0;
-  padding: 0;
-}
-.pb-del-btn:hover { color: var(--rojo2); background: var(--rojo-bg); }
 
 /* Empty state */
 .pb-empty {
@@ -880,14 +839,15 @@
   50% { box-shadow: 0 0 20px rgba(201,168,76,.30); }
 }
 
-.dash { padding: 6px 0; animation: tabFadeIn .3s ease; }
-.dash-flow { animation: fadeUp .35s ease .05s both; }
-.dash-grid .dash-card:nth-child(1) { animation: fadeUp .35s ease .10s both; }
-.dash-grid .dash-card:nth-child(2) { animation: fadeUp .35s ease .18s both; }
-.dash-grid .dash-card:nth-child(3) { animation: fadeUp .35s ease .26s both; }
-.dash-grid .dash-card:nth-child(4) { animation: fadeUp .35s ease .34s both; }
-.dash-comision { animation: fadeUp .35s ease .42s both; }
-.dash-section { animation: fadeUp .35s ease .50s both; }
+.dash { padding: 6px 0; animation: tabIn .3s ease; }
+.dash-flow { animation: cardIn .4s cubic-bezier(.22,1,.36,1) .05s both; }
+.dash-grid .dash-card { animation: cardIn .4s cubic-bezier(.22,1,.36,1) both; }
+.dash-grid .dash-card:nth-child(1) { animation-delay: .10s; }
+.dash-grid .dash-card:nth-child(2) { animation-delay: .18s; }
+.dash-grid .dash-card:nth-child(3) { animation-delay: .26s; }
+.dash-grid .dash-card:nth-child(4) { animation-delay: .34s; }
+.dash-comision { animation: cardIn .4s cubic-bezier(.22,1,.36,1) .42s both; }
+.dash-section { animation: cardIn .4s cubic-bezier(.22,1,.36,1) .50s both; }
 
 /* ── Flujo de Apuestas (reemplaza dash-market) ── */
 .dash-flow {
@@ -1074,6 +1034,15 @@
   box-shadow: 0 3px 16px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.035);
   position: relative;
   overflow: hidden;
+}
+.dash-comision::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 5%; right: 5%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ember), var(--gold), var(--ember), transparent);
+  opacity: .4;
+  animation: emberGlow 3s ease-in-out infinite;
 }
 .dash-comision::before {
   content: '';
@@ -1416,9 +1385,6 @@
   .log-entry { padding: 12px 12px; gap: 10px; }
   .log-msg { font-size: 12px; }
   .mini-fichas-grid { grid-template-columns: 1fr; }
-  .pb-st { width: 24px; height: 22px; }
-  .pb-st svg { width: 11px; height: 11px; }
-  .pb-del-btn { width: 24px; height: 22px; }
   .pf-row { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .pf-btn { padding: 3px 8px; font-size: 10px; }
   .pf-cnt { font-size: 8px; }

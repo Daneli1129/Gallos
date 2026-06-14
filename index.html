@@ -26,13 +26,13 @@
   }
   #login-screen .l-orbe:nth-child(2) {
     width: 340px; height: 340px;
-    background: radial-gradient(circle, rgba(192,57,43,.06), transparent 70%);
+    background: radial-gradient(circle, rgba(212,56,13,.05), transparent 70%);
     bottom: -15%; right: -10%;
     animation: orbe2 18s ease-in-out infinite;
   }
   #login-screen .l-orbe:nth-child(3) {
     width: 260px; height: 260px;
-    background: radial-gradient(circle, rgba(46,204,113,.04), transparent 70%);
+    background: radial-gradient(circle, rgba(201,168,76,.035), transparent 70%);
     bottom: 15%; left: 5%;
     animation: orbe3 25s ease-in-out infinite;
   }
@@ -54,17 +54,13 @@
     60% { transform: translate(10px, 30px) scale(1.03); }
     80% { transform: translate(-20px, 10px) scale(.95); }
   }
-  @keyframes orbe4 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(-25px, -20px) scale(1.07); }
-  }
 
-  /* ── PARTÍCULAS ── */
+  /* ── PARTÍCULAS / BRASAS ── */
   .l-particula {
     position: absolute;
-    width: 2px; height: 2px;
     border-radius: 50%;
     pointer-events: none;
+    mix-blend-mode: screen;
   }
 
   /* ── ANIMACIÓN DE ENTRADA ESCALONADA ── */
@@ -80,15 +76,23 @@
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* ── GALLO FLOTANTE + RESPIRACIÓN ── */
+  /* ── GALLO EMBLEMA — FLOTAR + LATIDO ── */
   .l-rooster {
-    animation: flotar 5s ease-in-out infinite;
+    animation: flotar 5s ease-in-out infinite, latidoEmblema 4s ease-in-out infinite;
   }
   @keyframes flotar {
-    0%, 100% { transform: translateY(0) scale(1); }
-    25% { transform: translateY(-4px) scale(1.01); }
-    50% { transform: translateY(-7px) scale(1.02); }
-    75% { transform: translateY(-3px) scale(0.99); }
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-4px); }
+    50% { transform: translateY(-7px); }
+    75% { transform: translateY(-3px); }
+  }
+  @keyframes latidoEmblema {
+    0%, 100% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
+    46% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
+    48% { filter: drop-shadow(0 0 50px rgba(201,168,76,.55)) brightness(1.08); }
+    50% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
+    52% { filter: drop-shadow(0 0 45px rgba(201,168,76,.45)) brightness(1.05); }
+    54% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
   }
   .rooster-eye {
     transform-origin: 18px 28px;
@@ -96,15 +100,15 @@
   }
   @keyframes parpadear {
     0%, 94%, 100% { transform: scaleY(1); }
-    96% { transform: scaleY(0.15); }
+    96% { transform: scaleY(0.1); }
   }
   .rooster-body {
     transform-origin: 30px 30px;
-    animation: respirar 5s ease-in-out infinite;
+    animation: respirar 6s ease-in-out infinite;
   }
   @keyframes respirar {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.015); }
+    50% { transform: scale(1.012); }
   }
 
   /* ── BRILLO DE BORDE DEL CARD ── */
@@ -219,7 +223,7 @@
     to { transform: rotate(360deg); }
   }
 
-  /* ── RIPPLE DEL BOTÓN ── */
+  /* ── RIPPLE + FLASH DEL BOTÓN ── */
   .l-btn .ripple-container {
     position: absolute;
     inset: 0;
@@ -237,6 +241,19 @@
   }
   @keyframes rippleAnim {
     to { transform: scale(3); opacity: 0; }
+  }
+  .l-btn .btn-flash {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at var(--fx, center), rgba(255,255,255,.35), transparent 60%);
+    opacity: 0;
+    pointer-events: none;
+    animation: btnFlash .45s ease-out forwards;
+  }
+  @keyframes btnFlash {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
   }
 
   /* ── LÍNEA DORADA EN INPUT AL FOCUS ── */
@@ -260,11 +277,16 @@
   @media (min-width: 768px) {
     .lw {
       max-width: 420px;
-      gap: 32px;
     }
     .l-card {
-      padding: 36px;
+      padding: 40px 36px 36px;
       box-shadow: 0 22px 70px rgba(0,0,0,.78), 0 0 60px rgba(201,168,76,.08), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .l-rooster {
+      width: 90px; height: 90px;
+    }
+    .l-brand {
+      font-size: 38px;
     }
     #login-screen .l-orbe:nth-child(1) {
       width: 500px; height: 500px;
@@ -284,7 +306,7 @@
 
   <div class="lw">
 
-    <!-- Marca -->
+    <!-- Emblema -->
     <div style="text-align:center;">
       <div class="l-rooster">
         <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -299,15 +321,17 @@
         </svg>
       </div>
       <div class="l-brand">Gallo Gold</div>
-      <div class="l-sub">Bruno's</div>
+      <div class="l-sub">bruno's</div>
     </div>
 
     <div class="l-div"></div>
 
     <!-- Card de inicio de sesión -->
     <div class="l-card">
-      <div class="l-title">Control de Apuestas</div>
-      <div class="l-hint">Bruno's</div>
+      <span class="l-border-l"></span>
+      <span class="l-border-r"></span>
+      <div class="l-ember"></div>
+      <div class="l-emblem">Apuestas en vivo</div>
 
       <div class="l-field">
         <label class="l-label" for="li-u">Usuario</label>
@@ -350,19 +374,27 @@ const loginEls = {
   btn: document.getElementById('l-btn')
 };
 
-// ── PARTÍCULAS ──
+// ── BRASAS / PARTÍCULAS ──
 (function crearParticulas() {
   const screen = document.getElementById('login-screen');
-  const colores = ['rgba(201,168,76,', 'rgba(255,255,255,', 'rgba(232,201,122,'];
-  for (let i = 0; i < 12; i++) {
+  const colores = [
+    'rgba(201,168,76,',  // oro
+    'rgba(212,56,13,',   // ascua
+    'rgba(232,201,122,', // oro claro
+    'rgba(255,255,255,', // blanco cálido
+  ];
+  for (let i = 0; i < 24; i++) {
     const p = document.createElement('div');
     p.className = 'l-particula';
-    const t = Math.random() * 120 + 60;
+    const sz = Math.random() * 3 + 1;
+    const t = Math.random() * 160 + 80;
+    const dx = (Math.random() - 0.5) * 60;
     p.style.cssText = `
       left:${Math.random()*100}%; top:${Math.random()*100}%;
-      width:${Math.random()*2+1}px; height:${Math.random()*2+1}px;
-      background:${colores[i%3]}${Math.random()*.15+.04});
-      animation: flotarP ${t}s linear infinite;
+      width:${sz}px; height:${sz}px;
+      background:${colores[i%4]}${Math.random()*.10+.02});
+      box-shadow: 0 0 ${sz*2}px ${colores[i%4]}${Math.random()*.05+.01});
+      animation: brasa ${t}s linear infinite;
       animation-delay: -${Math.random()*t}s;
       opacity:0;
     `;
@@ -372,11 +404,12 @@ const loginEls = {
 
 const estiloParticulas = document.createElement('style');
 estiloParticulas.textContent = `
-  @keyframes flotarP {
+  @keyframes brasa {
     0% { transform: translateY(0) translateX(0) scale(0); opacity: 0; }
-    10% { opacity: 1; transform: translateY(-10vh) translateX(10px) scale(1); }
-    90% { opacity: 1; }
-    100% { transform: translateY(-100vh) translateX(-20px) scale(0.5); opacity: 0; }
+    8% { opacity: 1; transform: translateY(-8vh) translateX(8px) scale(1); }
+    50% { opacity: .6; }
+    92% { opacity: .8; }
+    100% { transform: translateY(-100vh) translateX(-20px) scale(0.3); opacity: 0; }
   }
 `;
 document.head.appendChild(estiloParticulas);
@@ -397,11 +430,13 @@ if (eyeBtn) {
   });
 }
 
-// ── RIPPLE ──
+// ── RIPPLE + FLASH ──
 loginEls.btn.addEventListener('click', function(e) {
   const btn = this;
-  const container = btn.querySelector('.ripple-container');
   const rect = btn.getBoundingClientRect();
+
+  // Ripple
+  const container = btn.querySelector('.ripple-container');
   const ripple = document.createElement('span');
   ripple.className = 'ripple';
   const size = Math.max(rect.width, rect.height);
@@ -410,6 +445,15 @@ loginEls.btn.addEventListener('click', function(e) {
   ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
   container.appendChild(ripple);
   ripple.addEventListener('animationend', () => ripple.remove());
+
+  // Flash dorado
+  const flash = document.createElement('span');
+  flash.className = 'btn-flash';
+  const fx = ((e.clientX || e.touches?.[0]?.clientX || rect.left + rect.width/2) - rect.left) / rect.width * 100;
+  const fy = ((e.clientY || e.touches?.[0]?.clientY || rect.top + rect.height/2) - rect.top) / rect.height * 100;
+  flash.style.setProperty('--fx', `${fx}% ${fy}%`);
+  btn.appendChild(flash);
+  flash.addEventListener('animationend', () => flash.remove());
 });
 
 // ── REDIRECCIÓN SI YA HAY SESIÓN ──
