@@ -106,6 +106,13 @@ function renderPeleas() {
   renderToolbar();
   const sc = document.getElementById('peleas-scroll');
   sc.innerHTML = '';
+
+  // Vista especial para Terminadas
+  if (peleaFilter === 'cerrada') {
+    renderTerminadas(sc);
+    return;
+  }
+
   const stateWeight = { activa: 0, espera: 1, cerrada: 2 };
   const lista = [...peleas]
     .sort((a, b) => {
@@ -120,12 +127,11 @@ function renderPeleas() {
       return matchFilter && matchSearch;
     });
   if (!lista.length) {
-    sc.innerHTML = `<div style="text-align:center;color:var(--text3);padding:36px;font-size:13px;">${
+    sc.innerHTML = `<div class="pb-empty">${
       searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
-      peleaFilter === 'todas' ? 'No hay peleas registradas. Crea la primera con <strong style="color:var(--gold);">Crear pelea</strong>' :
-      peleaFilter === 'activa' ? 'No hay peleas en juego.' :
-      peleaFilter === 'espera' ? 'No hay peleas abiertas.' :
-      'No hay peleas cerradas.'
+      peleaFilter === 'activa' ? '⚡ No hay ninguna pelea en juego ahora.' :
+      peleaFilter === 'espera' ? '🥊 No hay peleas en espera.' :
+      'No hay peleas registradas.'
     }</div>`;
     return;
   }
@@ -134,8 +140,85 @@ function renderPeleas() {
     el.style.setProperty('--i', i);
     sc.appendChild(el);
   });
-  // Scroll al tope para ver la pelea más reciente
   sc.scrollTop = 0;
+}
+
+function renderTerminadas(sc) {
+  const cerradas = [...peleas]
+    .filter(p => p.estado === 'cerrada')
+    .filter(p => !searchPeleaQuery || String(p.num).includes(searchPeleaQuery))
+    .sort((a, b) => b.num - a.num);
+
+  if (!cerradas.length) {
+    sc.innerHTML = `<div class="pb-empty">No hay peleas terminadas aún.</div>`;
+    return;
+  }
+
+  // Cambiar grid a lista
+  sc.style.display = 'flex';
+  sc.style.flexDirection = 'column';
+  sc.style.gap = '8px';
+
+  cerradas.forEach(p => {
+    const tR = p.apuestas.filter(a => a.bando === 'rojo').reduce((s, a) => s + a.monto, 0);
+    const tV = p.apuestas.filter(a => a.bando === 'verde').reduce((s, a) => s + a.monto, 0);
+    const total = tR + tV;
+    const comision = total * 0.10;
+    const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
+    const pctV = 100 - pctR;
+
+    let ganadorHtml = '';
+    let ganadorColor = 'var(--text3)';
+    if (p.ganador === 'verde') {
+      ganadorHtml = `<span style="color:var(--green2);font-weight:900;font-size:13px;">● Verde</span>`;
+      ganadorColor = 'var(--green2)';
+    } else if (p.ganador === 'rojo') {
+      ganadorHtml = `<span style="color:var(--rojo2);font-weight:900;font-size:13px;">● Rojo</span>`;
+      ganadorColor = 'var(--rojo2)';
+    } else if (p.ganador === 'empate') {
+      ganadorHtml = `<span style="color:var(--gold2);font-weight:900;font-size:13px;">◆ Empate</span>`;
+      ganadorColor = 'var(--gold2)';
+    } else if (p.ganador === 'anulada') {
+      ganadorHtml = `<span style="color:var(--text3);font-weight:900;font-size:13px;">✕ Anulada</span>`;
+    } else {
+      ganadorHtml = `<span style="color:var(--text3);opacity:.5;font-size:12px;">Sin resultado</span>`;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'term-row';
+    row.style.cssText = `
+      display:grid;
+      grid-template-columns: 44px 1fr auto auto auto;
+      align-items:center;
+      gap:12px;
+      padding:12px 16px;
+      background:linear-gradient(145deg,rgba(28,26,22,.96),rgba(20,18,15,.98));
+      border:1px solid rgba(255,255,255,.06);
+      border-left:3px solid ${ganadorColor};
+      border-radius:10px;
+      transition:background .12s,border-color .12s;
+      cursor:default;
+    `;
+    row.innerHTML = `
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:900;font-size:15px;color:var(--gold);text-align:center;">#${p.num}</span>
+      <div>${ganadorHtml}<div style="margin-top:3px;display:flex;gap:4px;align-items:center;">
+        <div style="height:4px;border-radius:4px;background:var(--rojo2);width:${pctR * 0.6}px;max-width:60px;"></div>
+        <div style="height:4px;border-radius:4px;background:var(--green2);width:${pctV * 0.6}px;max-width:60px;"></div>
+        <span style="font-size:9px;color:var(--text3);margin-left:2px;font-family:'JetBrains Mono',monospace;">${pctR}R·${pctV}V</span>
+      </div></div>
+      <div style="text-align:right;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:var(--text2);">${fmt(total)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px;">TOTAL</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:var(--gold);">${fmt(comision)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px;">CASA 10%</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--text3);">${p.apuestas.length} apuestas</div>
+      </div>`;
+    sc.appendChild(row);
+  });
 }
 
 function renderToolbar() {
@@ -144,38 +227,67 @@ function renderToolbar() {
   const activas = peleas.filter(p => p.estado === 'activa').length;
   const espera  = peleas.filter(p => p.estado === 'espera').length;
   const cerradas = peleas.filter(p => p.estado === 'cerrada').length;
+  const peleaActiva = peleas.find(p => p.estado === 'activa');
+  // Solo 3 tabs
   const filtros = [
-    { id: 'todas',  label: `Pelea`,  count: totalPeleas },
-    { id: 'activa', label: 'En juego', count: activas },
-    { id: 'espera', label: 'Abiertas',  count: espera },
-    { id: 'cerrada',label: 'Cerradas',count: cerradas },
+    { id: 'activa',  label: 'En juego',   count: activas,  icon: '⚡' },
+    { id: 'espera',  label: 'En espera',  count: espera,   icon: '🥊' },
+    { id: 'cerrada', label: 'Terminadas', count: cerradas, icon: '✓'  },
   ];
+  // Si el filtro actual es 'todas', redirigir a 'activa'
+  if (peleaFilter === 'todas') peleaFilter = 'activa';
+
+  // Banner de pelea activa
+  let bannerHtml = '';
+  if (peleaActiva) {
+    const tR = peleaActiva.apuestas.filter(a => a.bando === 'rojo').reduce((s, a) => s + a.monto, 0);
+    const tV = peleaActiva.apuestas.filter(a => a.bando === 'verde').reduce((s, a) => s + a.monto, 0);
+    const vol = tR + tV;
+    const enEspera = peleas.filter(p => p.estado === 'espera').length;
+    bannerHtml = `
+      <div class="active-fight-banner">
+        <div class="afb-dot"></div>
+        <span class="afb-label">En juego</span>
+        <span class="afb-num">#${peleaActiva.num}</span>
+        ${vol > 0 ? `<span class="afb-vol">${fmt(vol)}</span>` : ''}
+        ${enEspera > 0 ? `<span class="afb-sep"></span><span class="afb-queued">${enEspera} en cola</span>` : ''}
+      </div>`;
+  }
+
   tb.innerHTML = `
-    <div class="p-num-big">${I.eye} Pelea</div>
-    <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;font-weight:600;">${totalPeleas} peleas · #${peleaActual}</span>
+    <div class="p-num-big">⚔️ Peleas</div>
     <div class="ctrl-sep"></div>
-    <div class="search-box p-search">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="number" id="pelea-search-inp" placeholder="Buscar #" value="${searchPeleaQuery || ''}" oninput="searchPelea(this.value)">
-    </div>
     <div class="pf-row">
       ${filtros.map(f => `
         <button class="pf-btn${peleaFilter === f.id ? ' active' : ''}"
                 onclick="setPeleaFilter('${f.id}')">
+          <span style="margin-right:3px;">${f.icon}</span>
           <span class="pf-lbl">${f.label}</span>
           <span class="pf-cnt">${f.count}</span>
         </button>`).join('')}
     </div>
-    <div class="estado-group">
-      <button class="btn-estado" onclick="expandirTodas()" title="Expandir todas las peleas">
-        ${I.eye} <span class="etxt">Exp. todo</span>
-      </button>
-      <button class="btn-estado" onclick="colapsarTodas()" title="Colapsar todas las peleas">
-        ${I.eyeOff} <span class="etxt">Col. todo</span>
-      </button>
-    </div>
     <div class="ctrl-sep"></div>
-    <button class="bc-n" onclick="nuevaPelea()">${I.plus} Crear pelea</button>`;
+    ${peleaFilter !== 'cerrada' ? `
+    <div class="search-box p-search">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="number" id="pelea-search-inp" placeholder="Buscar #" value="${searchPeleaQuery || ''}" oninput="searchPelea(this.value)">
+    </div>` : `
+    <div class="search-box p-search">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="number" id="pelea-search-inp" placeholder="Buscar #" value="${searchPeleaQuery || ''}" oninput="searchPelea(this.value)">
+    </div>`}
+    <button class="bc-n" onclick="nuevaPelea()">${I.plus} Nueva pelea</button>`;
+
+  // Insertar banner después del toolbar si hay pelea activa
+  const wrap = document.getElementById('peleas-toolbar').parentElement;
+  const oldBanner = wrap.querySelector('.active-fight-banner');
+  if (oldBanner) oldBanner.remove();
+  if (bannerHtml) {
+    const bannerEl = document.createElement('div');
+    bannerEl.innerHTML = bannerHtml;
+    const toolbar = document.getElementById('peleas-toolbar');
+    toolbar.insertAdjacentElement('afterend', bannerEl.firstElementChild);
+  }
 }
 
 function expandirTodas() {
@@ -195,7 +307,11 @@ function toggleMin(num) {
 }
 
 function buildPB(p) {
-  if (p.minimizada === undefined) p.minimizada = p.estado === 'cerrada';
+  if (p.minimizada === undefined) p.minimizada = false;
+
+  // ── Detectar si hay una pelea activa (para bloquear play en otras) ──
+  const hayActiva = peleas.some(x => x.estado === 'activa');
+  const estaEnCola = p.estado === 'espera' && hayActiva;
 
   const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
@@ -205,7 +321,7 @@ function buildPB(p) {
   const pctR   = total > 0 ? Math.round(tR / total * 100) : 50;
   const pctV   = 100 - pctR;
   const pCls   = p.estado === 'activa' ? 'pill-a' : p.estado === 'espera' ? 'pill-e' : 'pill-c';
-  const pTxt   = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'Abierto' : 'Cerrado';
+  const pTxt   = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'En espera' : 'Terminada';
 
   const chevron = p.minimizada
     ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
@@ -215,64 +331,76 @@ function buildPB(p) {
   const isActiva  = p.estado === 'activa';
   const isCerrada = p.estado === 'cerrada';
 
-  // Estado inline con SVG
-  const stateCtrl = `
+  // ── Controles de estado (pausa/play más visibles, sin stop) ──
+  const playExtraClass = (!isActiva && hayActiva) ? ' locked-play' : '';
+  const stateCtrl = !isCerrada ? `
     <div class="pb-state-group">
-      <button class="pb-st${isEspera ? ' active-e' : ''}"
+      <button class="pb-st-big${isEspera ? ' st-espera' : ''}"
               onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'espera')"
-              title="En espera">${I.pause}</button>
-      <button class="pb-st${isActiva ? ' active-a' : ''}"
+              title="Pausar / Poner en espera">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="pb-st-big${isActiva ? ' st-activa' : ''}${playExtraClass}"
               onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'activa')"
-              title="Activa">${I.play}</button>
-      <button class="pb-st${isCerrada ? ' active-c' : ''}"
-              onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'cerrada')"
-              title="Cerrada">${I.stop}</button>
-    </div>`;
+              title="${!isActiva && hayActiva ? 'Espera a que termine la pelea activa' : 'Activar / Iniciar'}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>
+    </div>` : '';
 
-  // Sección de ganador
-  let winnerSection;
-  if (isCerrada) {
-    if (p.ganador === 'empate') {
-      winnerSection = `<span class="pb-winner" style="color:var(--gold2);">${I.trophy} Empate</span>`;
-    } else if (p.ganador === 'anulada') {
-      winnerSection = `<span class="pb-winner" style="color:var(--text3);">${I.x} Anulada</span>`;
-    } else if (p.ganador) {
-      winnerSection = `<span class="pb-winner ${p.ganador === 'verde' ? 'v' : 'r'}">${I.trophy} Ganó <strong>${p.ganador === 'verde' ? 'Verde' : 'Rojo'}</strong></span>`;
-    } else {
-      winnerSection = `<span class="pb-winner" style="opacity:.4;">Sin resultado</span>`;
-    }
-  } else {
-    winnerSection = `
-      <button class="pb-btn-win wv" onclick="event.stopPropagation();ganarPelea(${p.num},'verde')">
-        ${I.trophy} Verde
-      </button>
-      <button class="pb-btn-win wr" onclick="event.stopPropagation();ganarPelea(${p.num},'rojo')">
-        ${I.trophy} Rojo
-      </button>
-      <button class="pb-btn-win" style="border-color:var(--gold-bdr);color:var(--gold2);background:rgba(201,168,76,.06);" onclick="event.stopPropagation();ganarPelea(${p.num},'empate')">
-        ${I.trophy} Empate
-      </button>
-      <button class="pb-btn-win" style="border-color:var(--border3);color:var(--text3);background:rgba(255,255,255,.04);" onclick="event.stopPropagation();ganarPelea(${p.num},'anulada')">
-        ${I.x} Anular
-      </button>`;
-  }
+  // ── Botón Finalizar (solo si no está cerrada) ──
+  const finalizarBtn = !isCerrada ? `
+    <button class="pb-fin-btn" onclick="event.stopPropagation();toggleFinalizarPanel(${p.num})" title="Finalizar pelea">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Finalizar
+    </button>` : '';
 
-  // Botón eliminar
+  // ── Botón eliminar más visible ──
   const delBtn = `
-      <button class="pb-del-btn" onclick="event.stopPropagation();confirmEliminarPelea(${p.num})" title="Eliminar pelea">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <button class="pb-del-btn-v2" onclick="event.stopPropagation();confirmEliminarPelea(${p.num})" title="Eliminar pelea">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
       </svg>
     </button>`;
 
-  // Botón + rápido en head (siempre visible)
-  const quickAddBtn = !isCerrada
-    ? `<button class="pb-quick-add" onclick="event.stopPropagation();openModalAp(${p.num})" title="Registrar apuesta">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </button>`
-    : '';
+  // ── Panel de finalizar (inline) ──
+  const finalizarPanel = !isCerrada ? `
+    <div class="pb-fin-panel" id="fin-panel-${p.num}" style="display:none;">
+      <div class="pb-fin-panel-inner">
+        <span class="pb-fin-lbl">¿Quién ganó la Pelea #${p.num}?</span>
+        <div class="pb-fin-opts">
+          <button class="pb-fin-opt fov" onclick="event.stopPropagation();ganarPelea(${p.num},'verde')">
+            <span class="fopt-dot" style="background:var(--green2);"></span> Verde
+          </button>
+          <button class="pb-fin-opt for" onclick="event.stopPropagation();ganarPelea(${p.num},'rojo')">
+            <span class="fopt-dot" style="background:var(--rojo2);"></span> Rojo
+          </button>
+          <button class="pb-fin-opt foe" onclick="event.stopPropagation();ganarPelea(${p.num},'empate')">
+            <span class="fopt-dot" style="background:var(--gold);"></span> Empate
+          </button>
+          <button class="pb-fin-opt foa" onclick="event.stopPropagation();ganarPelea(${p.num},'anulada')">
+            <span class="fopt-dot" style="background:var(--text3);"></span> Anular
+          </button>
+        </div>
+        <button class="pb-fin-close" onclick="event.stopPropagation();toggleFinalizarPanel(${p.num})">
+          Cancelar
+        </button>
+      </div>
+    </div>` : '';
+
+  // ── Resultado para cerradas ──
+  let winnerSection = '';
+  if (isCerrada) {
+    if (p.ganador === 'empate') {
+      winnerSection = `<span class="pb-winner" style="color:var(--gold2);">◆ Empate</span>`;
+    } else if (p.ganador === 'anulada') {
+      winnerSection = `<span class="pb-winner" style="color:var(--text3);">✕ Anulada</span>`;
+    } else if (p.ganador) {
+      const wCol = p.ganador === 'verde' ? 'var(--green2)' : 'var(--rojo2)';
+      winnerSection = `<span class="pb-winner" style="color:${wCol};">● Ganó <strong>${p.ganador === 'verde' ? 'Verde' : 'Rojo'}</strong></span>`;
+    } else {
+      winnerSection = `<span class="pb-winner" style="opacity:.4;">Sin resultado</span>`;
+    }
+  }
 
   const buildRows = lista => lista.length
     ? lista.map(a => {
@@ -281,7 +409,7 @@ function buildPB(p) {
         return `<div class="ap-row${cls}">
           <span class="ap-name">${sanitize(a.nombre)}</span>
           <span class="ap-monto${mc}">${fmt(a.monto)}</span>
-          <button class="ap-del" onclick="elimDePelea(${p.num},'${a.id}')">${I.x}</button>
+          ${!isCerrada ? `<button class="ap-del" onclick="elimDePelea(${p.num},'${a.id}')">${I.x}</button>` : ''}
         </div>`;
       }).join('')
     : '<div class="ap-empty">Sin apuestas</div>';
@@ -302,9 +430,13 @@ function buildPB(p) {
     : '';
 
   const div = document.createElement('div');
-  div.className = p.estado === 'activa' ? 'pb active-pelea-card' : 'pb';
+  let cardClass = 'pb';
+  if (isActiva) cardClass += ' active-pelea-card';
+  else if (estaEnCola) cardClass += ' queue-pelea-card';
+  div.className = cardClass;
   div.id = `bloque-${p.num}`;
   div.innerHTML = `
+    <div class="pb-state-strip"></div>
     <div class="pb-head" onclick="toggleMin(${p.num})">
       <div class="pb-head-l">
         <span class="pb-num">#${p.num}</span>
@@ -312,13 +444,14 @@ function buildPB(p) {
         <span class="pb-total">${fmt(total)} <span style="font-size:9px;color:var(--text3);font-weight:700;">VOL</span></span>
       </div>
       <div class="pb-head-r">
-        ${quickAddBtn}
         ${stateCtrl}
+        ${finalizarBtn}
         ${delBtn}
         <span class="pb-chev">${chevron}</span>
       </div>
     </div>
-    ${winnerSection ? `<div class="pb-actions">${winnerSection}</div>` : ''}
+    ${isCerrada && winnerSection ? `<div class="pb-actions">${winnerSection}</div>` : ''}
+    ${finalizarPanel}
     ${p.minimizada ? '' : `
       ${bar}
       <div class="p-cols">
@@ -345,6 +478,20 @@ function buildPB(p) {
         </div>
       </div>`}`;
   return div;
+}
+
+function toggleFinalizarPanel(pNum) {
+  const panel = document.getElementById(`fin-panel-${pNum}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  // Cerrar todos los paneles primero
+  document.querySelectorAll('.pb-fin-panel').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.pb-fin-btn').forEach(el => el.classList.remove('active'));
+  if (!isOpen) {
+    panel.style.display = 'block';
+    const btn = panel.closest('.pb')?.querySelector('.pb-fin-btn');
+    if (btn) btn.classList.add('active');
+  }
 }
 
 async function elimDePelea(pN, apId) {
@@ -409,11 +556,28 @@ async function ganarPelea(pN, ganador) {
   await logAction('resultado', `Pelea #${pN} cerrada — <strong>${actMsg}</strong>`, '✓');
   await refreshData();
   toast(`<strong>Pelea #${pN}</strong> cerrada — ${actMsg}`, 'success');
+
+  // ── Sugerir siguiente pelea en cola ──
+  const siguiente = peleas.filter(x => x.estado === 'espera').sort((a, b) => a.num - b.num)[0];
+  if (siguiente) {
+    setTimeout(() => {
+      toast(`Pelea <strong>#${siguiente.num}</strong> lista para iniciar`, 'info');
+    }, 800);
+  }
 }
 
 async function cambiarEstadoPelea(pN, nuevoEstado) {
   const p = getPelea(pN);
   if (!p || p.estado === nuevoEstado) return;
+
+  // ── REGLA: solo 1 pelea activa a la vez ──
+  if (nuevoEstado === 'activa') {
+    const otraActiva = peleas.find(x => x.estado === 'activa' && x.num !== pN);
+    if (otraActiva) {
+      toast(`Ya hay una pelea activa (#${otraActiva.num}). Ciérrala primero para activar esta.`, 'error');
+      return;
+    }
+  }
 
   if (p.estado === 'cerrada' && nuevoEstado !== 'cerrada') {
     const ok = await showConfirm(`¿Reabrir <strong>Pelea #${pN}</strong>?<br>Se eliminarán los resultados actuales.`, '↺');
@@ -455,7 +619,19 @@ async function confirmEliminarPelea(pN) {
 }
 
 async function nuevaPelea() {
-  const nextNum = peleas.length > 0 ? Math.max(...peleas.map(p => p.num)) + 1 : 1;
+  // ── REGLA: máximo 1 activa + 1 en espera ──
+  const hayActiva = peleas.some(p => p.estado === 'activa');
+  const hayEspera = peleas.some(p => p.estado === 'espera');
+
+  if (hayActiva && hayEspera) {
+    // Mostrar bloqueo visual en la app
+    mostrarBloqueoNuevaPelea();
+    return;
+  }
+
+  const nextNum = peleas.filter(p => p.estado !== 'cerrada').length > 0
+    ? Math.max(...peleas.map(p => p.num)) + 1
+    : (peleas.length > 0 ? Math.max(...peleas.map(p => p.num)) + 1 : 1);
 
   const { error } = await sb.from('peleas').insert({
     numero_pelea: nextNum,
@@ -467,10 +643,84 @@ async function nuevaPelea() {
     return;
   }
 
-  peleaFilter = 'todas';
+  peleaFilter = 'espera';
   await logAction('nueva-pelea', `Nueva pelea #${nextNum} creada`, '+');
   await refreshData();
-  toast(`<strong>Pelea #${nextNum}</strong> creada`);
+  toast(`<strong>Pelea #${nextNum}</strong> creada — en espera`);
+}
+
+function mostrarBloqueoNuevaPelea() {
+  // Quitar overlay previo si existe
+  const prev = document.getElementById('bloqueo-overlay');
+  if (prev) prev.remove();
+
+  const pActiva = peleas.find(p => p.estado === 'activa');
+  const pEspera = peleas.find(p => p.estado === 'espera');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'bloqueo-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:800;
+    background:rgba(0,0,0,.75);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    backdrop-filter:blur(4px);
+    animation:fadeInOverlay .2s ease;
+  `;
+  overlay.innerHTML = `
+    <div style="
+      max-width:380px;width:100%;
+      background:linear-gradient(145deg,rgba(28,24,16,.98),rgba(16,14,9,.99));
+      border:1px solid rgba(201,168,76,.35);
+      border-radius:18px;
+      padding:28px 24px;
+      box-shadow:0 0 0 1px rgba(201,168,76,.15) inset, 0 24px 60px rgba(0,0,0,.7), 0 0 60px rgba(201,168,76,.08);
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+    ">
+      <div style="
+        position:absolute;top:0;left:0;right:0;height:2px;
+        background:linear-gradient(90deg,transparent,#E8C97A 30%,#C9A84C 50%,#E8C97A 70%,transparent);
+      "></div>
+      <div style="font-size:36px;margin-bottom:12px;">🚫</div>
+      <div style="
+        font-family:'Outfit',sans-serif;font-size:17px;font-weight:900;
+        color:var(--text);margin-bottom:8px;
+      ">No se puede crear otra pelea</div>
+      <div style="
+        font-family:'Outfit',sans-serif;font-size:13px;color:var(--text3);
+        line-height:1.6;margin-bottom:20px;
+      ">Ya hay una pelea <span style="color:var(--green2);font-weight:700;">En juego (#${pActiva?.num ?? '?'})</span> y otra <span style="color:var(--gold);font-weight:700;">En espera (#${pEspera?.num ?? '?'})</span>.<br>Finaliza la pelea activa primero.</div>
+      <div style="display:flex;gap:10px;">
+        <div style="
+          flex:1;padding:10px;
+          background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);
+          border-radius:10px;
+        ">
+          <div style="font-size:9px;font-weight:700;color:rgba(46,204,113,.6);text-transform:uppercase;letter-spacing:.6px;">En juego</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:#2ECC71;">#${pActiva?.num ?? '?'}</div>
+        </div>
+        <div style="
+          flex:1;padding:10px;
+          background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);
+          border-radius:10px;
+        ">
+          <div style="font-size:9px;font-weight:700;color:rgba(201,168,76,.6);text-transform:uppercase;letter-spacing:.6px;">En espera</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:var(--gold);">#${pEspera?.num ?? '?'}</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('bloqueo-overlay').remove()" style="
+        margin-top:18px;width:100%;padding:11px;
+        background:linear-gradient(145deg,#E8C97A,#C9A84C,#A8862B);
+        border:none;border-radius:10px;
+        font-family:'Outfit',sans-serif;font-size:14px;font-weight:900;
+        color:#0a0806;cursor:pointer;
+        box-shadow:0 4px 16px rgba(201,168,76,.25);
+      ">Entendido</button>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // ── MODAL APOSTADOR ───────────────────────────────────────

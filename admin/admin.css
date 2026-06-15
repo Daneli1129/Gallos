@@ -183,28 +183,169 @@
   box-shadow: 0 8px 24px rgba(0,0,0,.34), 0 0 24px rgba(201,168,76,.05), 0 0 0 1px rgba(201,168,76,.04) inset;
 }
 
-/* Resaltado de pelea activa */
 .pb.active-pelea-card {
-  border-color: var(--gold);
-  box-shadow: 0 8px 32px rgba(201, 168, 76, 0.18), 0 0 0 1px rgba(201, 168, 76, 0.25) inset;
-  animation: activeCardPulse 3s ease-in-out infinite;
+  border-color: rgba(46, 204, 113, 0.55);
+  background: linear-gradient(145deg, rgba(8,28,18,.98), rgba(4,18,10,.99));
+  box-shadow:
+    0 0 0 1px rgba(46,204,113,.3) inset,
+    0 8px 40px rgba(0,0,0,.5),
+    0 0 50px rgba(46,204,113,.12),
+    0 0 90px rgba(46,204,113,.06);
+  animation: activePulseGreen 2.8s ease-in-out infinite;
+  z-index: 2;
 }
-@keyframes activeCardPulse {
-  0%, 100% { border-color: var(--gold); box-shadow: 0 8px 32px rgba(201,168,76,.18), 0 0 0 1px rgba(201,168,76,.25) inset; }
-  50% { border-color: var(--gold2); box-shadow: 0 8px 40px rgba(201,168,76,.28), 0 0 0 1px rgba(201,168,76,.35) inset; }
+@keyframes activePulseGreen {
+  0%, 100% {
+    border-color: rgba(46,204,113,.5);
+    box-shadow: 0 0 0 1px rgba(46,204,113,.25) inset, 0 8px 40px rgba(0,0,0,.5), 0 0 40px rgba(46,204,113,.10), 0 0 70px rgba(46,204,113,.05);
+  }
+  50% {
+    border-color: rgba(46,204,113,.75);
+    box-shadow: 0 0 0 1px rgba(46,204,113,.45) inset, 0 8px 48px rgba(0,0,0,.55), 0 0 60px rgba(46,204,113,.18), 0 0 100px rgba(46,204,113,.09);
+  }
 }
 .pb.active-pelea-card::before {
-  background: linear-gradient(90deg, transparent 0%, #E8C97A 20%, #C9A84C 40%, #E8C97A 60%, transparent 80%);
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(46,204,113,.4) 15%,
+    #2ECC71 35%,
+    #27AE60 50%,
+    #2ECC71 65%,
+    rgba(46,204,113,.4) 85%,
+    transparent 100%);
+  background-size: 200% 100%;
+  height: 3px;
   opacity: 1;
+  filter: blur(0px);
+  box-shadow: 0 0 14px rgba(46,204,113,.5), 0 0 28px rgba(46,204,113,.25);
+  animation: shimmerGreen 2.5s ease-in-out infinite;
+}
+@keyframes shimmerGreen {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 .pb.active-pelea-card::after {
-  background: linear-gradient(145deg, rgba(255,255,255,.045), transparent 36%, rgba(212,56,13,.15));
-  animation: emberGlow 2.5s ease-in-out infinite;
+  background: radial-gradient(ellipse at 50% 0%, rgba(46,204,113,.09) 0%, transparent 60%),
+              linear-gradient(180deg, rgba(46,204,113,.05) 0%, transparent 40%);
+  animation: activeInnerGlow 2.8s ease-in-out infinite;
+}
+@keyframes activeInnerGlow {
+  0%, 100% { opacity: .7; }
+  50% { opacity: 1; }
 }
 .pb.active-pelea-card:hover {
-  border-color: var(--gold2);
-  box-shadow: 0 12px 40px rgba(201,168,76,.26), 0 0 0 1px rgba(201,168,76,.3) inset;
+  border-color: rgba(46,204,113,.85);
+  box-shadow: 0 0 0 1px rgba(46,204,113,.5) inset, 0 12px 50px rgba(0,0,0,.55), 0 0 70px rgba(46,204,113,.22);
 }
+
+/* ══════════════════════════════════════════════
+   PELEA EN COLA — Ámbar Cálido Suave
+   ══════════════════════════════════════════════ */
+.pb.queue-pelea-card {
+  border-color: rgba(201,168,76,.35);
+  background: linear-gradient(145deg, rgba(28,24,14,.97), rgba(20,17,8,.98));
+  box-shadow:
+    0 0 0 1px rgba(201,168,76,.15) inset,
+    0 6px 32px rgba(0,0,0,.45),
+    0 0 36px rgba(201,168,76,.07);
+  animation: queuePulseAmber 5s ease-in-out infinite;
+}
+@keyframes queuePulseAmber {
+  0%, 100% {
+    border-color: rgba(201,168,76,.28);
+    box-shadow: 0 0 0 1px rgba(201,168,76,.1) inset, 0 6px 32px rgba(0,0,0,.45), 0 0 28px rgba(201,168,76,.06);
+  }
+  50% {
+    border-color: rgba(201,168,76,.48);
+    box-shadow: 0 0 0 1px rgba(201,168,76,.22) inset, 0 6px 36px rgba(0,0,0,.48), 0 0 44px rgba(201,168,76,.11);
+  }
+}
+.pb.queue-pelea-card::before {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(201,168,76,.25) 15%,
+    #E8C97A 35%,
+    #C9A84C 50%,
+    #E8C97A 65%,
+    rgba(201,168,76,.25) 85%,
+    transparent 100%);
+  background-size: 200% 100%;
+  height: 2px;
+  opacity: .85;
+  animation: shimmerAmber 5s ease-in-out infinite;
+}
+@keyframes shimmerAmber {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.pb.queue-pelea-card::after {
+  background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,.07) 0%, transparent 55%);
+  opacity: .6;
+}
+.pb.queue-pelea-card:hover {
+  border-color: rgba(201,168,76,.55);
+  box-shadow: 0 0 0 1px rgba(201,168,76,.28) inset, 0 10px 40px rgba(0,0,0,.5), 0 0 50px rgba(201,168,76,.11);
+}
+
+/* ══ BARRA LATERAL DE ESTADO ══ */
+.pb-state-strip {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 14px 0 0 14px;
+  z-index: 3;
+  pointer-events: none;
+}
+.pb.active-pelea-card .pb-state-strip {
+  background: linear-gradient(180deg, #2ECC71, #27AE60, #1e8449);
+  animation: stripGlowGreenA 2.8s ease-in-out infinite;
+}
+@keyframes stripGlowGreenA {
+  0%, 100% { box-shadow: 2px 0 12px rgba(46,204,113,.4); }
+  50% { box-shadow: 2px 0 22px rgba(46,204,113,.7); }
+}
+.pb.queue-pelea-card .pb-state-strip {
+  background: linear-gradient(180deg, #E8C97A, #C9A84C, #A8862B);
+  animation: stripGlowAmberA 5s ease-in-out infinite;
+}
+@keyframes stripGlowAmberA {
+  0%, 100% { box-shadow: 2px 0 8px rgba(201,168,76,.28); opacity: .8; }
+  50% { box-shadow: 2px 0 16px rgba(201,168,76,.5); opacity: 1; }
+}
+
+/* ══ BANNER PELEA EN JUEGO (admin) ══ */
+.active-fight-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px;
+  background: linear-gradient(90deg, rgba(14,36,22,.98), rgba(8,26,16,.98));
+  border-bottom: 1px solid rgba(46,204,113,.22);
+  flex-shrink: 0; position: relative; overflow: hidden;
+}
+.active-fight-banner::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(46,204,113,.5) 30%, rgba(46,204,113,.8) 50%, rgba(46,204,113,.5) 70%, transparent);
+  animation: bannerScanA 3s linear infinite;
+}
+@keyframes bannerScanA {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.afb-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #2ECC71; flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(46,204,113,.7), 0 0 12px rgba(46,204,113,.4);
+  animation: dotPulseA 1.4s ease-in-out infinite;
+}
+@keyframes dotPulseA {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 6px rgba(46,204,113,.7); }
+  50% { transform: scale(1.35); box-shadow: 0 0 12px rgba(46,204,113,.9), 0 0 22px rgba(46,204,113,.6); }
+}
+.afb-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: rgba(46,204,113,.75); text-transform: uppercase; letter-spacing: .8px; flex-shrink: 0; }
+.afb-num   { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 900; color: #2ECC71; text-shadow: 0 0 12px rgba(46,204,113,.5); }
+.afb-vol   { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: rgba(46,204,113,.55); margin-left: 4px; }
+.afb-sep   { width: 1px; height: 14px; background: rgba(46,204,113,.2); flex-shrink: 0; }
+.afb-queued { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; color: rgba(201,168,76,.6); margin-left: auto; letter-spacing: .3px; }
 
 /* Head de pelea */
 .pb-head {

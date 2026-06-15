@@ -577,12 +577,31 @@ function renderToolbar() {
   const activas = peleas.filter(p => p.estado === 'activa').length;
   const espera  = peleas.filter(p => p.estado === 'espera').length;
   const cerradas = peleas.filter(p => p.estado === 'cerrada').length;
+  const peleaActivaObj = peleas.find(p => p.estado === 'activa');
   const filtros = [
     { id: 'todas',  label: `Pelea`,  count: totalPeleas },
     { id: 'activa', label: 'En juego', count: activas },
     { id: 'espera', label: 'Abiertas',  count: espera },
     { id: 'cerrada',label: 'Cerradas',count: cerradas },
   ];
+
+  // Banner de pelea activa
+  let bannerHtml = '';
+  if (peleaActivaObj) {
+    const tR = peleaActivaObj.apuestas.filter(a => a.bando === 'rojo').reduce((s, a) => s + a.monto, 0);
+    const tV = peleaActivaObj.apuestas.filter(a => a.bando === 'verde').reduce((s, a) => s + a.monto, 0);
+    const vol = tR + tV;
+    const enEspera = peleas.filter(p => p.estado === 'espera').length;
+    bannerHtml = `
+      <div class="active-fight-banner">
+        <div class="afb-dot"></div>
+        <span class="afb-label">En juego</span>
+        <span class="afb-num">#${peleaActivaObj.num}</span>
+        ${vol > 0 ? `<span class="afb-vol">${fmt(vol)}</span>` : ''}
+        ${enEspera > 0 ? `<span class="afb-sep"></span><span class="afb-queued">${enEspera} en cola</span>` : ''}
+      </div>`;
+  }
+
   tb.innerHTML = `
     <div class="p-num-big">Pelea</div>
     <span class="p-num-sub">${totalPeleas} peleas · #${peleaActual}</span>
@@ -609,6 +628,17 @@ function renderToolbar() {
     </div>
     <div class="ctrl-sep"></div>
     <span class="ro-badge">Solo lectura</span>`;
+
+  // Insertar banner después del toolbar si hay pelea activa
+  const wrap = document.getElementById('peleas-toolbar').parentElement;
+  const oldBanner = wrap.querySelector('.active-fight-banner');
+  if (oldBanner) oldBanner.remove();
+  if (bannerHtml) {
+    const bannerEl = document.createElement('div');
+    bannerEl.innerHTML = bannerHtml;
+    const toolbar = document.getElementById('peleas-toolbar');
+    toolbar.insertAdjacentElement('afterend', bannerEl.firstElementChild);
+  }
 }
 
 function expandirTodas() {
@@ -628,6 +658,11 @@ function toggleMin(num) {
 
 function buildPB(p) {
   if (p.minimizada === undefined) p.minimizada = p.estado === 'cerrada';
+
+  // ── Detectar si hay una pelea activa (para estilo "cola") ──
+  const hayActiva = peleas.some(x => x.estado === 'activa');
+  const estaEnCola = p.estado === 'espera' && hayActiva;
+
   const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
   const tR     = rojos.reduce((s, a) => s + a.monto, 0);
@@ -678,9 +713,14 @@ function buildPB(p) {
     : '';
 
   const div = document.createElement('div');
-  div.className = p.estado === 'activa' ? 'pb active-pelea-card' : 'pb';
+  // ── Clase visual según estado ──
+  let cardClass = 'pb';
+  if (p.estado === 'activa') cardClass += ' active-pelea-card';
+  else if (estaEnCola) cardClass += ' queue-pelea-card';
+  div.className = cardClass;
   div.id = `bloque-${p.num}`;
   div.innerHTML = `
+    <div class="pb-state-strip"></div>
     <div class="pb-head" onclick="toggleMin(${p.num})">
       <div class="pb-head-l">
         <span class="pb-num">#${p.num}</span>
@@ -718,6 +758,7 @@ function buildPB(p) {
       </div>`}`;
   return div;
 }
+
 
 // ── DIARIO / SEMANAL ──────────────────────────────────────
 function renderPeriodo(tipo) {
