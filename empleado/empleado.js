@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const u = currentUser || { nombre: 'Empleado', rol: 'empleado' };
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
-  document.getElementById('tb-av').textContent  = initials(u.nombre);
-  document.getElementById('tb-un').textContent  = u.nombre;
+  document.getElementById('tb-av').textContent = initials(u.nombre);
+  document.getElementById('tb-un').textContent = u.nombre;
 
   buildNav();
   buildMobNav();
@@ -106,6 +106,7 @@ function renderPeleas() {
   renderToolbar();
   const sc = document.getElementById('peleas-scroll');
   sc.innerHTML = '';
+  sc.style.display = ''; // Reset inline style de Terminadas
 
   // Vista especial para Terminadas
   if (peleaFilter === 'cerrada') {
@@ -127,12 +128,11 @@ function renderPeleas() {
       return matchFilter && matchSearch;
     });
   if (!lista.length) {
-    sc.innerHTML = `<div class="pb-empty">${
-      searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
-      peleaFilter === 'activa' ? '⚡ No hay ninguna pelea en juego ahora.' :
-      peleaFilter === 'espera' ? '🥊 No hay peleas en espera.' :
-      'No hay peleas registradas.'
-    }</div>`;
+    sc.innerHTML = `<div class="pb-empty">${searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
+        peleaFilter === 'activa' ? ' No hay ninguna pelea en juego ahora.' :
+          peleaFilter === 'espera' ? ' No hay peleas en espera.' :
+            'No hay peleas registradas.'
+      }</div>`;
     return;
   }
   lista.forEach((p, i) => {
@@ -154,16 +154,18 @@ function renderTerminadas(sc) {
     return;
   }
 
-  // Cambiar grid a lista
+  // Cambiar grid a lista vertical desde arriba
   sc.style.display = 'flex';
   sc.style.flexDirection = 'column';
   sc.style.gap = '8px';
+  sc.style.justifyContent = 'flex-start';
+  sc.style.alignItems = 'stretch';
 
   cerradas.forEach(p => {
     const tR = p.apuestas.filter(a => a.bando === 'rojo').reduce((s, a) => s + a.monto, 0);
     const tV = p.apuestas.filter(a => a.bando === 'verde').reduce((s, a) => s + a.monto, 0);
     const total = tR + tV;
-    const comision = total * 0.10;
+    const comision = total * (appConfig.comision_porcentaje / 100);
     const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
     const pctV = 100 - pctR;
 
@@ -222,17 +224,17 @@ function renderTerminadas(sc) {
 }
 
 function renderToolbar() {
-  const tb   = document.getElementById('peleas-toolbar');
+  const tb = document.getElementById('peleas-toolbar');
   const totalPeleas = peleas.length;
   const activas = peleas.filter(p => p.estado === 'activa').length;
-  const espera  = peleas.filter(p => p.estado === 'espera').length;
+  const espera = peleas.filter(p => p.estado === 'espera').length;
   const cerradas = peleas.filter(p => p.estado === 'cerrada').length;
   const peleaActiva = peleas.find(p => p.estado === 'activa');
   // Solo 3 tabs
   const filtros = [
-    { id: 'activa',  label: 'En juego',   count: activas,  icon: '⚡' },
-    { id: 'espera',  label: 'En espera',  count: espera,   icon: '🥊' },
-    { id: 'cerrada', label: 'Terminadas', count: cerradas, icon: '✓'  },
+    { id: 'activa', label: 'En juego', count: activas },
+    { id: 'espera', label: 'En espera', count: espera },
+    { id: 'cerrada', label: 'Terminadas', count: cerradas },
   ];
   // Si el filtro actual es 'todas', redirigir a 'activa'
   if (peleaFilter === 'todas') peleaFilter = 'activa';
@@ -259,9 +261,8 @@ function renderToolbar() {
     <div class="ctrl-sep"></div>
     <div class="pf-row">
       ${filtros.map(f => `
-        <button class="pf-btn${peleaFilter === f.id ? ' active' : ''}"
+        <button class="pf-btn ${f.id}${peleaFilter === f.id ? ' active' : ''}"
                 onclick="setPeleaFilter('${f.id}')">
-          <span style="margin-right:3px;">${f.icon}</span>
           <span class="pf-lbl">${f.label}</span>
           <span class="pf-cnt">${f.count}</span>
         </button>`).join('')}
@@ -313,42 +314,39 @@ function buildPB(p) {
   const hayActiva = peleas.some(x => x.estado === 'activa');
   const estaEnCola = p.estado === 'espera' && hayActiva;
 
-  const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
+  const rojos = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
-  const tR     = rojos.reduce((s, a) => s + a.monto, 0);
-  const tV     = verdes.reduce((s, a) => s + a.monto, 0);
-  const total  = tR + tV;
-  const pctR   = total > 0 ? Math.round(tR / total * 100) : 50;
-  const pctV   = 100 - pctR;
-  const pCls   = p.estado === 'activa' ? 'pill-a' : p.estado === 'espera' ? 'pill-e' : 'pill-c';
-  const pTxt   = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'En espera' : 'Terminada';
+  const tR = rojos.reduce((s, a) => s + a.monto, 0);
+  const tV = verdes.reduce((s, a) => s + a.monto, 0);
+  const total = tR + tV;
+  const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
+  const pctV = 100 - pctR;
+  const pCls = p.estado === 'activa' ? 'pill-a' : p.estado === 'espera' ? 'pill-e' : 'pill-c';
+  const pTxt = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'En espera' : 'Terminada';
 
   const chevron = p.minimizada
     ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
     : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
 
-  const isEspera  = p.estado === 'espera';
-  const isActiva  = p.estado === 'activa';
+  const isEspera = p.estado === 'espera';
+  const isActiva = p.estado === 'activa';
   const isCerrada = p.estado === 'cerrada';
 
-  // ── Controles de estado (pausa/play más visibles, sin stop) ──
-  const playExtraClass = (!isActiva && hayActiva) ? ' locked-play' : '';
+  // ── Controles de estado: solo play si espera, solo indicador si activa ──
   const stateCtrl = !isCerrada ? `
     <div class="pb-state-group">
-      <button class="pb-st-big${isEspera ? ' st-espera' : ''}"
-              onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'espera')"
-              title="Pausar / Poner en espera">
+      ${isEspera ? `<button class="pb-st-big st-espera" title="En espera">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
       </button>
-      <button class="pb-st-big${isActiva ? ' st-activa' : ''}${playExtraClass}"
-              onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'activa')"
-              title="${!isActiva && hayActiva ? 'Espera a que termine la pelea activa' : 'Activar / Iniciar'}">
+      <button class="pb-st-big${(!isActiva && hayActiva) ? ' locked-play' : ''}" onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'activa')" title="${hayActiva ? 'Espera a que termine la pelea activa' : 'Iniciar pelea'}">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-      </button>
+      </button>` : `<button class="pb-st-big st-activa" title="En juego">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>`}
     </div>` : '';
 
-  // ── Botón Finalizar (solo si no está cerrada) ──
-  const finalizarBtn = !isCerrada ? `
+  // ── Botón Finalizar (solo si no está cerrada y tiene apuestas) ──
+  const finalizarBtn = !isCerrada && p.apuestas.length > 0 ? `
     <button class="pb-fin-btn" onclick="event.stopPropagation();toggleFinalizarPanel(${p.num})" title="Finalizar pelea">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       Finalizar
@@ -404,17 +402,17 @@ function buildPB(p) {
 
   const buildRows = lista => lista.length
     ? lista.map(a => {
-        const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
-        const mc  = a.resultado === 'ganada' ? ' g'  : a.resultado === 'perdida' ? ' p'  : '';
-        return `<div class="ap-row${cls}">
+      const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
+      const mc = a.resultado === 'ganada' ? ' g' : a.resultado === 'perdida' ? ' p' : '';
+      return `<div class="ap-row${cls}">
           <span class="ap-name">${sanitize(a.nombre)}</span>
           <span class="ap-monto${mc}">${fmt(a.monto)}</span>
           ${!isCerrada ? `<button class="ap-del" onclick="elimDePelea(${p.num},'${a.id}')">${I.x}</button>` : ''}
         </div>`;
-      }).join('')
+    }).join('')
     : '<div class="ap-empty">Sin apuestas</div>';
 
-  const addBtn = !isCerrada
+  const addBtn = isEspera
     ? `<div class="pb-add-row">
         <button class="btn-add-ap" onclick="openModalAp(${p.num})">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -469,12 +467,12 @@ function buildPB(p) {
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Rojo</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * 0.9)}</span>
+          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Verde</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * 0.9)}</span>
+          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
       </div>`}`;
   return div;
@@ -495,7 +493,7 @@ function toggleFinalizarPanel(pNum) {
 }
 
 async function elimDePelea(pN, apId) {
-  const p  = getPelea(pN);
+  const p = getPelea(pN);
   const ap = p.apuestas.find(a => a.id === apId);
 
   const { error } = await sb.from('apuestas').delete().eq('id', apId);
@@ -557,12 +555,15 @@ async function ganarPelea(pN, ganador) {
   await refreshData();
   toast(`<strong>Pelea #${pN}</strong> cerrada — ${actMsg}`, 'success');
 
-  // ── Sugerir siguiente pelea en cola ──
+  // ── Preguntar si iniciar la siguiente pelea ──
   const siguiente = peleas.filter(x => x.estado === 'espera').sort((a, b) => a.num - b.num)[0];
   if (siguiente) {
-    setTimeout(() => {
-      toast(`Pelea <strong>#${siguiente.num}</strong> lista para iniciar`, 'info');
-    }, 800);
+    setTimeout(async () => {
+      const ok = await showConfirm(`¿Listo para iniciar <strong>Pelea #${siguiente.num}</strong>?`, '▶');
+      if (ok) {
+        await cambiarEstadoPelea(siguiente.num, 'activa');
+      }
+    }, 600);
   }
 }
 
@@ -575,6 +576,11 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
     const otraActiva = peleas.find(x => x.estado === 'activa' && x.num !== pN);
     if (otraActiva) {
       toast(`Ya hay una pelea activa (#${otraActiva.num}). Ciérrala primero para activar esta.`, 'error');
+      return;
+    }
+    // ── REGLA: debe tener al menos una apuesta ──
+    if (!p.apuestas || p.apuestas.length === 0) {
+      toast(`No se puede iniciar Pelea #${pN}. Registra al menos una apuesta primero.`, 'error');
       return;
     }
   }
@@ -619,19 +625,15 @@ async function confirmEliminarPelea(pN) {
 }
 
 async function nuevaPelea() {
-  // ── REGLA: máximo 1 activa + 1 en espera ──
-  const hayActiva = peleas.some(p => p.estado === 'activa');
+  // ── REGLA: solo 1 pelea en espera a la vez ──
   const hayEspera = peleas.some(p => p.estado === 'espera');
 
-  if (hayActiva && hayEspera) {
-    // Mostrar bloqueo visual en la app
+  if (hayEspera) {
     mostrarBloqueoNuevaPelea();
     return;
   }
 
-  const nextNum = peleas.filter(p => p.estado !== 'cerrada').length > 0
-    ? Math.max(...peleas.map(p => p.num)) + 1
-    : (peleas.length > 0 ? Math.max(...peleas.map(p => p.num)) + 1 : 1);
+  const nextNum = peleas.length > 0 ? Math.max(...peleas.map(p => p.num)) + 1 : 1;
 
   const { error } = await sb.from('peleas').insert({
     numero_pelea: nextNum,
@@ -650,11 +652,9 @@ async function nuevaPelea() {
 }
 
 function mostrarBloqueoNuevaPelea() {
-  // Quitar overlay previo si existe
   const prev = document.getElementById('bloqueo-overlay');
   if (prev) prev.remove();
 
-  const pActiva = peleas.find(p => p.estado === 'activa');
   const pEspera = peleas.find(p => p.estado === 'espera');
 
   const overlay = document.createElement('div');
@@ -691,24 +691,14 @@ function mostrarBloqueoNuevaPelea() {
       <div style="
         font-family:'Outfit',sans-serif;font-size:13px;color:var(--text3);
         line-height:1.6;margin-bottom:20px;
-      ">Ya hay una pelea <span style="color:var(--green2);font-weight:700;">En juego (#${pActiva?.num ?? '?'})</span> y otra <span style="color:var(--gold);font-weight:700;">En espera (#${pEspera?.num ?? '?'})</span>.<br>Finaliza la pelea activa primero.</div>
-      <div style="display:flex;gap:10px;">
-        <div style="
-          flex:1;padding:10px;
-          background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.25);
-          border-radius:10px;
-        ">
-          <div style="font-size:9px;font-weight:700;color:rgba(46,204,113,.6);text-transform:uppercase;letter-spacing:.6px;">En juego</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:#2ECC71;">#${pActiva?.num ?? '?'}</div>
-        </div>
-        <div style="
-          flex:1;padding:10px;
-          background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);
-          border-radius:10px;
-        ">
-          <div style="font-size:9px;font-weight:700;color:rgba(201,168,76,.6);text-transform:uppercase;letter-spacing:.6px;">En espera</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:var(--gold);">#${pEspera?.num ?? '?'}</div>
-        </div>
+      ">Ya hay una pelea <span style="color:var(--gold);font-weight:700;">En espera (#${pEspera?.num ?? '?'})</span>.<br>Solo puede haber una pelea en espera a la vez.</div>
+      <div style="
+        padding:10px;
+        background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);
+        border-radius:10px;margin-bottom:4px;
+      ">
+        <div style="font-size:9px;font-weight:700;color:rgba(201,168,76,.6);text-transform:uppercase;letter-spacing:.6px;">En espera</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:900;color:var(--gold);">#${pEspera?.num ?? '?'}</div>
       </div>
       <button onclick="document.getElementById('bloqueo-overlay').remove()" style="
         margin-top:18px;width:100%;padding:11px;
@@ -764,7 +754,7 @@ function updateModalSteps() {
 }
 
 function renderModalStep() {
-  const m      = _modal;
+  const m = _modal;
   const titles = { 1: 'Apostador', 2: 'Lado', 3: 'Monto', 4: 'Confirmar' };
   document.getElementById('modal-title').textContent = 'Registrar Apuesta';
 
@@ -825,7 +815,7 @@ function renderModalStep() {
 
   // ── PASO 3: Monto ────────────────────────────────────────
   else if (m.step === 3) {
-    const amts   = [500, 1000, 1500, 2000];
+    const amts = [500, 1000, 1500, 2000];
     const esOtro = m.monto && !amts.includes(m.monto);
     body.innerHTML = `
       <div style="font-size:12px;color:var(--text2);margin-bottom:12px;font-weight:600;">
@@ -836,14 +826,14 @@ function renderModalStep() {
       </div>
       <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;">Monto de apuesta</div>
       <div class="modal-amt-grid">
-        ${amts.map(a => `<button class="mab${m.monto === a ? ' sel' : ''}" onclick="selAmt(${a})">${fmt(a)}</button>`).join('')}
-        <button class="mab otro${esOtro ? ' sel' : ''}" onclick="selAmt('otro')">Monto personalizado</button>
+        ${amts.map(a => `<button class="mab${m.monto === a ? ' sel' : ''}" onclick="selAmt(event,${a})">${fmt(a)}</button>`).join('')}
+        <button class="mab otro${esOtro ? ' sel' : ''}" onclick="selAmt(event,'otro')">Monto personalizado</button>
       </div>
       <div id="otro-wrap" style="display:${esOtro ? 'block' : 'none'};">
         <input class="modal-otro-inp" id="otro-inp"
-               type="number" inputmode="numeric" pattern="[0-9]*"
-               placeholder="0"
-               value="${esOtro ? m.monto : ''}"
+               type="text" inputmode="numeric"
+               placeholder="$0"
+               value="${esOtro ? '$' + Number(m.monto).toLocaleString('en-US') : ''}"
                oninput="otroChange(this.value)">
       </div>`;
     foot.innerHTML = `
@@ -853,11 +843,11 @@ function renderModalStep() {
 
   // ── PASO 4: Confirmar ────────────────────────────────────
   else if (m.step === 4) {
-    const j         = jugadores.find(x => x.id === m.jugadorId);
+    const j = jugadores.find(x => x.id === m.jugadorId);
     const saldoMonto = j ? calcFicha(j).saldo : 0;
     const nextSaldo = saldoMonto - m.monto;
     const isOverLimit = j && (nextSaldo < -appConfig.limite_credito);
-    const isSaldoNeg  = !isOverLimit && j && (saldoMonto < 0);
+    const isSaldoNeg = !isOverLimit && j && (saldoMonto < 0);
 
     let alertH = '';
     if (m.esNuevo) {
@@ -926,11 +916,15 @@ function goBack() { _modal.step--; renderModalStep(); }
 function modalNext1() {
   const q = (document.getElementById('ms-inp')?.value || '').trim();
   if (!q) return;
+  if (q.split(/\s+/).length < 2) {
+    toast('Ingresa nombre y apellido del apostador', 'error');
+    return;
+  }
   _modal.nombre = q;
   if (!_modal.jugadorId && !_modal.esNuevo) {
     const exact = jugadores.find(j => j.nombre.toLowerCase() === q.toLowerCase());
     if (exact) { _modal.jugadorId = exact.id; _modal.esNuevo = false; }
-    else          _modal.esNuevo = true;
+    else _modal.esNuevo = true;
   }
   _modal.step = 2;
   renderModalStep();
@@ -952,9 +946,9 @@ function modalNext3() {
 function filterSugs(q) {
   const sug = document.getElementById('ms-sugs');
   const nxt = document.getElementById('mb-n1');
-  _modal.nombre    = q;
+  _modal.nombre = q;
   _modal.jugadorId = null;
-  _modal.esNuevo   = false;
+  _modal.esNuevo = false;
   if (nxt) nxt.disabled = !q.trim();
   if (!q.trim()) { sug.style.display = 'none'; return; }
 
@@ -981,7 +975,7 @@ function filterSugs(q) {
     html += `<div class="modal-sug-new" onclick="regNuevo()">✨ Registrar "<strong>${q}</strong>" como nuevo</div>`;
   }
 
-  sug.innerHTML     = html;
+  sug.innerHTML = html;
   sug.style.display = html ? 'block' : 'none';
 }
 
@@ -991,16 +985,16 @@ function msKeydown(e) {
   if (!q) return;
   const exact = jugadores.find(j => j.nombre.toLowerCase() === q.toLowerCase());
   if (exact) selSug(exact.id);
-  else        regNuevo();
+  else regNuevo();
 }
 
 function selSug(jId) {
   const j = jugadores.find(x => x.id === jId);
   if (!j) return;
-  _modal.nombre    = j.nombre;
+  _modal.nombre = j.nombre;
   _modal.jugadorId = jId;
-  _modal.esNuevo   = false;
-  document.getElementById('ms-inp').value   = j.nombre;
+  _modal.esNuevo = false;
+  document.getElementById('ms-inp').value = j.nombre;
   document.getElementById('ms-sugs').style.display = 'none';
   const nxt = document.getElementById('mb-n1');
   if (nxt) nxt.disabled = false;
@@ -1009,9 +1003,9 @@ function selSug(jId) {
 function regNuevo() {
   const q = document.getElementById('ms-inp')?.value.trim();
   if (!q) return;
-  _modal.nombre    = q;
+  _modal.nombre = q;
   _modal.jugadorId = null;
-  _modal.esNuevo   = true;
+  _modal.esNuevo = true;
   document.getElementById('ms-sugs').style.display = 'none';
   const nxt = document.getElementById('mb-n1');
   if (nxt) nxt.disabled = false;
@@ -1029,21 +1023,21 @@ function selTeam(b) {
 }
 
 // ── Selección de monto ────────────────────────────────────
-function selAmt(a) {
+function selAmt(e, a) {
   if (a === 'otro') {
     _modal.monto = null;
     document.querySelectorAll('.mab').forEach(el => el.classList.toggle('sel', el.classList.contains('otro')));
-    const ow  = document.getElementById('otro-wrap');
+    const ow = document.getElementById('otro-wrap');
     const inp = document.getElementById('otro-inp');
-    if (ow)  ow.style.display = 'block';
-    if (inp) { inp.focus(); inp.select(); }
+    if (ow) ow.style.display = 'block';
+    if (inp) { inp.value = ''; inp.focus(); }
     const nxt = document.getElementById('mb-n3');
     if (nxt) nxt.disabled = true;
     return;
   }
   _modal.monto = a;
   document.querySelectorAll('.mab').forEach(el => el.classList.remove('sel'));
-  event.currentTarget.classList.add('sel');
+  e.currentTarget.classList.add('sel');
   const ow = document.getElementById('otro-wrap');
   if (ow) ow.style.display = 'none';
   const nxt = document.getElementById('mb-n3');
@@ -1051,16 +1045,21 @@ function selAmt(a) {
 }
 
 function otroChange(v) {
-  const n   = parseFloat(v);
+  const raw = v.replace(/[^0-9]/g, '');
+  const n = parseInt(raw, 10);
   _modal.monto = n > 0 ? n : null;
+  const inp = document.getElementById('otro-inp');
+  if (inp) {
+    inp.value = raw ? '$' + Number(raw).toLocaleString('en-US') : '';
+  }
   const nxt = document.getElementById('mb-n3');
   if (nxt) nxt.disabled = !(_modal.monto > 0);
 }
 
 // ── Confirmar y guardar apuesta ───────────────────────────
 async function modalConfirm() {
-  const m   = _modal;
-  let jId   = m.jugadorId;
+  const m = _modal;
+  let jId = m.jugadorId;
 
   // Si es nuevo, registrarlo en el sistema
   if (!jId) {
@@ -1068,9 +1067,9 @@ async function modalConfirm() {
     if (exist) {
       jId = exist.id;
     } else {
-      const nc  = COLORS[jugadores.length % COLORS.length];
+      const nc = COLORS[jugadores.length % COLORS.length];
       const randSuff = Math.floor(Math.random() * 900) + 100;
-      const nid = m.nombre.replace(/\s+/g,'').substring(0,2).toUpperCase() + (jugadores.length + 1) + '-' + randSuff;
+      const nid = m.nombre.replace(/\s+/g, '').substring(0, 2).toUpperCase() + (jugadores.length + 1) + '-' + randSuff;
 
       const { error } = await sb.from('jugadores').insert({
         id: nid,
@@ -1089,7 +1088,7 @@ async function modalConfirm() {
     }
   }
 
-  const j         = jugadores.find(x => x.id === jId);
+  const j = jugadores.find(x => x.id === jId);
   const prevSaldo = j ? calcFicha(j).saldo : 0;
   const nextSaldo = prevSaldo - m.monto;
   const isOverLimit = j && (nextSaldo < -appConfig.limite_credito);
@@ -1142,7 +1141,7 @@ async function modalConfirm() {
       '!');
   }
 
-  await logAction(    'apuesta',
+  await logAction('apuesta',
     `<strong>${j ? j.nombre : m.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · Pelea #${m.peleaNum}`,
     '$');
 

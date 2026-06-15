@@ -30,10 +30,6 @@
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   font-family: 'JetBrains Mono', monospace;
 }
-.p-num-sub {
-  font-size: 11px; color: var(--text3);
-  font-family: 'JetBrains Mono', monospace; font-weight: 600;
-}
 .ctrl-sep { flex: 1; }
 
 /* ── Filtros de peleas ── */
@@ -62,10 +58,24 @@
   white-space: nowrap;
 }
 .pf-btn:hover { color: var(--text); }
-.pf-btn.active {
-  background: linear-gradient(145deg, rgba(201,168,76,.18), rgba(232,201,122,.08));
-  color: var(--text);
-  box-shadow: 0 0 0 1px rgba(201,168,76,.10), 0 2px 8px rgba(0,0,0,.22);
+.pf-btn.activa:hover { color: #6beb9a; }
+.pf-btn.espera:hover { color: var(--gold); }
+.pf-btn.cerrada:hover { color: #ff8a7a; }
+.pf-btn.active { color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.22); }
+.pf-btn.activa.active {
+  background: linear-gradient(145deg, rgba(46,204,113,.2), rgba(46,204,113,.06));
+  box-shadow: 0 0 0 1px rgba(46,204,113,.2), 0 2px 8px rgba(0,0,0,.22);
+  color: #6beb9a;
+}
+.pf-btn.espera.active {
+  background: linear-gradient(145deg, rgba(201,168,76,.22), rgba(232,201,122,.08));
+  box-shadow: 0 0 0 1px rgba(201,168,76,.15), 0 2px 8px rgba(0,0,0,.22);
+  color: var(--gold);
+}
+.pf-btn.cerrada.active {
+  background: linear-gradient(145deg, rgba(231,76,60,.2), rgba(231,76,60,.06));
+  box-shadow: 0 0 0 1px rgba(231,76,60,.2), 0 2px 8px rgba(0,0,0,.22);
+  color: #ff8a7a;
 }
 .pf-cnt {
   font-family: 'JetBrains Mono', monospace;
@@ -76,23 +86,6 @@
 }
 .pf-btn.active .pf-cnt { opacity: 1; color: var(--text2); }
 
-/* Control expandir/colapsar */
-.view-ctrls {
-  display: flex; gap: 2px;
-  background: var(--s1); padding: 2px;
-  border-radius: 6px; border: 1px solid var(--border);
-  margin: 0 2px;
-}
-.vc-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px;
-  border-radius: 4px; border: none;
-  background: transparent;
-  cursor: pointer;
-  color: var(--text3);
-  transition: background .12s, color .12s;
-}
-.vc-btn:hover { background: rgba(201,168,76,.1); color: var(--gold); }
 .ro-badge {
   color: var(--text3);
   font-size: 10px; font-weight: 600;
@@ -437,6 +430,7 @@
   width: 7px; height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
+  background: currentColor;
 }
 .col-pct {
   font-weight: 600;
@@ -444,30 +438,33 @@
   margin-left: auto;
 }
 .ap-row {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   transition: background .1s, transform .1s;
 }
 .ap-row.gr { background: rgba(34,197,94,.08); }
 .ap-row.pr { background: rgba(204,0,0,.08); }
 .ap-row:hover { background: rgba(255,255,255,.025); }
 .ap-name {
+  grid-column: 1;
+  grid-row: 1;
   font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 14px;
   color: var(--text);
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.25;
 }
 .ap-monto {
+  grid-column: 1;
+  grid-row: 2;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
-  white-space: nowrap;
 }
 .ap-monto.g { color: var(--green2); }
 .ap-monto.p { color: var(--rojo2); }
@@ -1468,6 +1465,15 @@
   .peleas-scroll  { padding: 10px; }
   .ap-name { font-size: 13px; }
   .ap-monto { font-size: 13px; }
+  .dash-card { padding: 14px; }
+  .dash-card-val { font-size: 24px; }
+  .active-fight-banner { padding: 8px 12px; font-size: 12px; gap: 8px; }
+  .config-card { padding: 20px; }
+  .log-fb { padding: 6px 8px; font-size: 10px; }
+  .ph-stat { padding: 8px 12px; min-width: 70px; }
+  .ph-stat-val { font-size: 18px; }
+  .fc-head { padding: 16px 18px 12px; }
+  .fc-tot-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 767px) {
   .peleas-toolbar { padding: 10px; gap: 6px; }
@@ -1477,8 +1483,6 @@
   .p-cols  { display: flex; flex-direction: column; }
   .col-r   { border-right: none; border-bottom: 1px solid var(--border2); }
   .col-hdr { padding: 8px 12px; text-align: left; font-size: 10px; }
-  .ap-name { max-width: 55%; font-size: 14px; }
-  .ap-monto { font-size: 14px; }
   .ap-row { padding: 8px 12px; }
   .pb-rep-cell { padding: 10px 12px; }
   .pb-rep-val { font-size: 12px; }
@@ -1507,7 +1511,7 @@
   /* Dashboard mobile */
   .dash-grid { grid-template-columns: 1fr; gap: 10px; }
   .dash-flow { grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px; }
-  .dash-flow-vs { display: none; }
+  .dash-flow-vs-circle { display: none; }
   .dash-flow-exp { grid-column: 1 / -1; flex-direction: row; gap: 8px; justify-content: center; }
   .dash-card-val { font-size: 22px; }
   .dash-hdr-title { font-size: 18px; }
@@ -1529,6 +1533,61 @@
   .pf-row { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .pf-btn { padding: 3px 8px; font-size: 10px; }
   .pf-cnt { font-size: 8px; }
+
+  /* Config mobile */
+  .config-card { padding: 16px; }
+  .config-title { font-size: 14px; }
+  .config-input-wrapper { padding: 8px 10px; }
+  .config-input { font-size: 13px; }
+  .config-btn-save, .config-btn-danger { width: 100%; align-self: stretch; text-align: center; }
+
+  /* Active fight banner mobile */
+  .active-fight-banner { padding: 6px 10px; font-size: 11px; gap: 6px; flex-wrap: wrap; }
+  .afb-num { font-size: 11px; }
+  .afb-vol { font-size: 11px; }
+
+  /* Dashboard extra compact */
+  .dash-card { padding: 12px; gap: 6px; }
+  .dash-card-lbl { font-size: 10px; }
+  .dash-flow { padding: 10px; gap: 4px; }
+  .dash-flow-val { font-size: 13px; }
+  .dash-flow-lbl { font-size: 9px; }
+
+  /* Diario/Semanal extra */
+  .mini-ficha { padding: 10px; }
+  .mf-name { font-size: 11px; }
+  .mf-ap { font-size: 9px; }
+
+  /* Bitácora extra */
+  .log-time { font-size: 9px; }
+
+  /* Fichas detail card */
+  .ficha-card { border-radius: 10px; }
+  .fc-pv-val { font-size: 16px; }
+  .fc-pv-lbl { font-size: 9px; }
+  .fc-tot-lbl { font-size: 9px; }
+
+  /* Mobile bottom nav */
+  .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .mob-nav-btn { padding: 6px 4px; font-size: 8px; gap: 2px; }
+  .mob-nav-btn svg { width: 16px; height: 16px; }
+}
+@media (max-width: 399px) {
+  .peleas-toolbar { padding: 8px; gap: 4px; }
+  .p-num-big { font-size: 16px; }
+  .pf-btn { padding: 2px 6px; font-size: 9px; }
+  .pf-cnt { font-size: 7px; }
+  .dash-card-val { font-size: 18px; }
+  .dash-hdr-title { font-size: 16px; }
+  .dash-section { padding: 10px 12px; }
+  .config-card { padding: 12px; border-radius: 10px; }
+  .config-title { font-size: 13px; }
+  .config-desc { font-size: 11px; }
+  .log-fb { font-size: 7px; padding: 6px 1px; }
+  .log-fb svg { width: 12px; height: 12px; }
+  .active-fight-banner { padding: 5px 8px; font-size: 10px; }
+  .mobile-bottom-nav { gap: 2px; }
+  .mob-nav-btn svg { width: 14px; height: 14px; }
 }
 
 /* ── AJUSTES (Settings Config Tab) ── */

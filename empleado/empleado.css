@@ -60,10 +60,24 @@
   white-space: nowrap;
 }
 .pf-btn:hover { color: var(--text); }
-.pf-btn.active {
-  background: linear-gradient(145deg, rgba(201,168,76,.18), rgba(232,201,122,.08));
-  color: var(--text);
-  box-shadow: 0 0 0 1px rgba(201,168,76,.10), 0 2px 8px rgba(0,0,0,.22);
+.pf-btn.activa:hover { color: #6beb9a; }
+.pf-btn.espera:hover { color: var(--gold); }
+.pf-btn.cerrada:hover { color: #ff8a7a; }
+.pf-btn.active { color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.22); }
+.pf-btn.activa.active {
+  background: linear-gradient(145deg, rgba(46,204,113,.2), rgba(46,204,113,.06));
+  box-shadow: 0 0 0 1px rgba(46,204,113,.2), 0 2px 8px rgba(0,0,0,.22);
+  color: #6beb9a;
+}
+.pf-btn.espera.active {
+  background: linear-gradient(145deg, rgba(201,168,76,.22), rgba(232,201,122,.08));
+  box-shadow: 0 0 0 1px rgba(201,168,76,.15), 0 2px 8px rgba(0,0,0,.22);
+  color: var(--gold);
+}
+.pf-btn.cerrada.active {
+  background: linear-gradient(145deg, rgba(231,76,60,.2), rgba(231,76,60,.06));
+  box-shadow: 0 0 0 1px rgba(231,76,60,.2), 0 2px 8px rgba(0,0,0,.22);
+  color: #ff8a7a;
 }
 .pf-cnt {
   font-family: 'JetBrains Mono', monospace;
@@ -459,35 +473,6 @@
 }
 .pb-head:hover .pb-chev { opacity: .7; }
 
-/* Botón + rápido en head */
-.pb-quick-add {
-  width: 28px; height: 26px;
-  border: none; border-radius: 7px;
-  background: linear-gradient(145deg, #E8C97A, #C9A84C);
-  color: #0a0806;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .2s, box-shadow .2s;
-  flex-shrink: 0;
-  padding: 0;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(201,168,76,.18);
-}
-.pb-quick-add::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(145deg, rgba(255,255,255,.15) 0%, transparent 50%);
-  pointer-events: none;
-}
-.pb-quick-add:hover {
-  box-shadow: 0 0 0 3px rgba(201,168,76,.20), 0 5px 14px rgba(201,168,76,.20);
-}
-.pb-quick-add:active { transform: scale(.93); }
-.pb-quick-add svg { width: 14px; height: 14px; }
-
 /* ── Controles de estado inline (compacto) ── */
 .pb-state-group {
   display: inline-flex;
@@ -557,6 +542,141 @@
   padding: 0;
 }
 .pb-del-btn:hover { color: var(--rojo2); background: var(--rojo-bg); }
+
+/* ── Controles de estado grandes (reemplazan .pb-st) ── */
+.pb-st-big {
+  width: 34px; height: 30px;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  padding: 0;
+  flex-shrink: 0;
+  transition: background .15s, color .15s, border-color .15s, box-shadow .15s, transform .12s;
+}
+.pb-st-big svg { width: 15px; height: 15px; }
+.pb-st-big:hover { color: var(--text); transform: scale(1.12); }
+.pb-st-big.st-espera {
+  background: var(--gold-bg);
+  color: var(--gold);
+  border-color: rgba(201,168,76,.35);
+  box-shadow: 0 0 14px rgba(201,168,76,.25);
+}
+.pb-st-big.st-espera:hover { box-shadow: 0 0 22px rgba(201,168,76,.45); }
+.pb-st-big.st-activa {
+  background: var(--green-bg);
+  color: var(--green2);
+  border-color: rgba(46,204,113,.35);
+  animation: bigPlayPulse 2s ease-in-out infinite;
+}
+@keyframes bigPlayPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(46,204,113,.25); }
+  50% { box-shadow: 0 0 22px rgba(46,204,113,.6); }
+}
+.pb-st-big.locked-play {
+  cursor: not-allowed; opacity: .25;
+  filter: grayscale(1); pointer-events: none;
+}
+
+/* ── Botón eliminar v2 (más visible) ── */
+.pb-del-btn-v2 {
+  width: 34px; height: 30px;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  padding: 0;
+  flex-shrink: 0;
+  transition: background .15s, color .15s, border-color .15s, box-shadow .15s, transform .12s;
+}
+.pb-del-btn-v2 svg { width: 15px; height: 15px; }
+.pb-del-btn-v2:hover {
+  color: var(--rojo2); background: var(--rojo-bg);
+  border-color: rgba(231,76,60,.3);
+  box-shadow: 0 0 16px rgba(231,76,60,.25);
+  transform: scale(1.12);
+}
+
+/* ── Botón Finalizar ── */
+.pb-fin-btn {
+  padding: 5px 12px; border-radius: 6px;
+  border: 1.5px solid var(--gold-bdr);
+  background: var(--gold-bg);
+  color: var(--gold);
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; gap: 5px;
+  transition: background .15s, color .15s, border-color .15s, box-shadow .15s, transform .12s;
+  white-space: nowrap;
+}
+.pb-fin-btn:hover {
+  background: rgba(201,168,76,.2);
+  box-shadow: 0 0 18px rgba(201,168,76,.3);
+  transform: scale(1.05);
+}
+.pb-fin-btn.active {
+  background: rgba(201,168,76,.2);
+  box-shadow: 0 0 24px rgba(201,168,76,.4);
+  border-color: var(--gold);
+}
+.pb-fin-btn svg { width: 13px; height: 13px; }
+
+/* ── Panel Finalizar ── */
+.pb-fin-panel { padding: 4px 12px 12px; }
+.pb-fin-panel-inner {
+  background: linear-gradient(145deg, rgba(28,26,22,.96), rgba(20,18,15,.98));
+  border: 1px solid rgba(201,168,76,.15);
+  border-radius: 10px; padding: 14px;
+}
+.pb-fin-lbl {
+  display: block;
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 700;
+  color: var(--text2); margin-bottom: 10px; text-align: center;
+}
+.pb-fin-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pb-fin-opt {
+  padding: 10px; border-radius: 8px;
+  border: 1.5px solid var(--border2);
+  background: var(--s2);
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--text);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background .12s, border-color .12s, transform .12s, box-shadow .12s;
+}
+.pb-fin-opt:hover { transform: scale(1.03); }
+.pb-fin-opt.fov:hover {
+  border-color: var(--green2); background: rgba(46,204,113,.1);
+  box-shadow: 0 0 14px rgba(46,204,113,.15);
+}
+.pb-fin-opt.for:hover {
+  border-color: var(--rojo2); background: rgba(231,76,60,.1);
+  box-shadow: 0 0 14px rgba(231,76,60,.15);
+}
+.pb-fin-opt.foe:hover {
+  border-color: var(--gold); background: var(--gold-bg);
+  box-shadow: 0 0 14px rgba(201,168,76,.15);
+}
+.pb-fin-opt.foa:hover {
+  border-color: var(--text3); background: rgba(255,255,255,.05);
+}
+.fopt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.pb-fin-close {
+  margin-top: 8px; width: 100%; padding: 8px;
+  border: none; border-radius: 6px;
+  background: transparent; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700;
+  color: var(--text3); transition: color .12s, background .12s;
+}
+.pb-fin-close:hover { color: var(--text2); background: var(--s1); }
 
 /* ── Acciones (ganador / resultado) ── */
 .pb-actions {
@@ -639,25 +759,30 @@
 
 /* ── Filas de apostadores ── */
 .ap-row {
-  padding: 10px 14px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+  align-items: center;
   transition: background .1s, transform .1s;
 }
 .ap-row.gr { background: rgba(34,197,94,.08); }
 .ap-row.pr { background: rgba(204,0,0,.08); }
 .ap-row:hover { background: rgba(255,255,255,.025); }
 .ap-name {
-  font-weight: 700; font-size: 15px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text);
+  grid-column: 1; grid-row: 1;
+  font-weight: 700; font-size: 14px; color: var(--text);
+  white-space: normal; word-break: break-word; line-height: 1.25;
 }
 .ap-monto {
-  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; white-space: nowrap;
+  grid-column: 1; grid-row: 2;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
 }
 .ap-monto.g { color: var(--green2); }
 .ap-monto.p { color: var(--rojo2); }
 .ap-del {
+  grid-column: 2; grid-row: 1 / span 2;
+  align-self: center;
   background: none; border: none; cursor: pointer;
-  color: var(--text3); padding: 2px; border-radius: 3px;
+  color: var(--text3); padding: 4px; border-radius: 4px;
   display: flex; align-items: center; flex-shrink: 0; transition: background .12s, color .12s;
 }
 .ap-del:hover { color: var(--rojo2); background: var(--rojo-bg); }
@@ -963,6 +1088,8 @@
   position: relative;
   z-index: 1;
 }
+.mtb[data-side="rojo"] .mtb-ico { color: #ff6b5a; opacity: .8; }
+.mtb[data-side="verde"] .mtb-ico { color: #6beb9a; opacity: .8; }
 .mtb .mtb-lbl {
   font-size: 11px;
   font-weight: 700;
@@ -1212,8 +1339,6 @@
   .p-cols  { display: flex; flex-direction: column; }
   .col-r   { border-right: none; border-bottom: 1px solid var(--border2); }
   .col-hdr { padding: 8px 12px; text-align: left; font-size: 10px; }
-  .ap-name  { max-width: 55%; font-size: 14px; }
-  .ap-monto { font-size: 14px; }
   .ap-row { padding: 8px 12px; }
   .pb-add-row { padding: 8px 10px; }
   .btn-add-ap { font-size: 12px; padding: 8px; }
@@ -1224,16 +1349,99 @@
   .modal-head { padding: 12px 14px; }
   .modal-body { padding: 14px; }
   .modal-foot { padding: 10px 14px; }
-  .pb-quick-add { width: 24px; height: 22px; }
-  .pb-st { width: 24px; height: 22px; }
-  .pb-st svg { width: 11px; height: 11px; }
-  .pb-del-btn { width: 24px; height: 22px; }
+  .pb-st-big { width: 30px; height: 26px; }
+  .pb-st-big svg { width: 13px; height: 13px; }
+  .pb-del-btn-v2 { width: 30px; height: 26px; }
+  .pb-del-btn-v2 svg { width: 13px; height: 13px; }
+  .pb-fin-btn { padding: 4px 8px; font-size: 10px; }
+  .pb-fin-btn svg { width: 11px; height: 11px; }
   .pf-row { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .pf-btn { padding: 3px 8px; font-size: 10px; }
   .pf-cnt { font-size: 8px; }
 
+  /* Modal steps compact */
+  .modal-steps-container { padding: 10px 14px 6px; margin-bottom: 12px; }
+  .ms { width: 22px; height: 22px; font-size: 9px; }
+  .modal-steps::before { left: 6px; right: 6px; height: 2px; }
+  .modal-steps-fill { left: 6px; height: 2px; }
 
+  /* Team buttons compact */
+  .modal-team-btns { gap: 8px; }
+  .mtb { padding: 18px 10px 14px; border-radius: 10px; gap: 5px; }
+  .mtb .mtb-ico { font-size: 14px; }
+  .mtb .mtb-lbl { font-size: 10px; }
+  .mtb.sel-r::after, .mtb.sel-v::after { width: 20px; height: 20px; font-size: 10px; line-height: 20px; top: -5px; right: -5px; }
+
+  /* Amount grid compact */
+  .modal-amt-grid { gap: 6px; }
+  .mab { padding: 10px 8px; font-size: 12px; border-radius: 7px; }
+  .mab.otro { font-size: 12px; }
+
+  /* Search suggestions compact */
+  .modal-search input { padding: 9px 11px; font-size: 14px; }
+  .modal-sug-item { padding: 8px 11px; font-size: 12px; }
+  .modal-sug-new { padding: 8px 11px; font-size: 11px; }
+
+  /* Confirm box compact */
+  .modal-confirm-box { border-radius: 8px; }
+  .mcb-row { padding: 8px 12px; }
+  .mcb-lbl { font-size: 9px; }
+  .mcb-val { font-size: 12px; }
+
+  /* Fight card compact */
+  .pb-head { padding: 8px 10px; gap: 6px; }
+  .pb-state-group { gap: 3px; }
+
+  /* Finalizar panel compact */
+  .pb-fin-panel-inner { padding: 10px; }
+  .pb-fin-lbl { font-size: 12px; }
+  .pb-fin-opts { gap: 5px; }
+  .pb-fin-opt { padding: 7px 10px; font-size: 11px; border-radius: 6px; }
+  .fopt-dot { width: 8px; height: 8px; }
+  .pb-fin-close { font-size: 11px; padding: 8px; }
+
+  /* Mobile bottom nav safe area */
+  .mobile-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .mob-nav-btn { padding: 6px 8px; font-size: 9px; gap: 2px; }
+  .mob-nav-btn svg { width: 18px; height: 18px; }
+
+  /* Pelea bar compact */
+  .pelea-bar { height: 6px; border-radius: 3px; }
+  .pelea-bar-inner { height: 6px; }
+
+  /* Reparte compact */
+  .pb-rep-cell { gap: 4px; }
+  .pb-rep-lbl { font-size: 9px; }
+
+  /* Button state group mobile */
+  .btn-estado svg { width: 13px; height: 13px; }
+
+  /* Add apostador row mobile */
+  .pb-add-row svg { width: 12px; height: 12px; }
 }
 @media (max-width: 399px) {
-  .modal-box { max-height: 94vh; }
+  .modal-box { max-height: 94vh; border-radius: 8px; }
+  .modal-head { padding: 10px 12px; font-size: 14px; }
+  .modal-body { padding: 10px; }
+  .modal-foot { padding: 8px 12px; }
+  .modal-steps-container { padding: 8px 10px 4px; margin-bottom: 8px; }
+  .ms { width: 18px; height: 18px; font-size: 8px; border-width: 1.5px; }
+  .modal-team-btns { gap: 6px; }
+  .mtb { padding: 14px 8px 10px; border-radius: 8px; gap: 4px; }
+  .mtb .mtb-ico { font-size: 12px; }
+  .mtb .mtb-lbl { font-size: 9px; }
+  .mtb.sel-r::after, .mtb.sel-v::after { width: 16px; height: 16px; font-size: 8px; line-height: 16px; }
+  .modal-amt-grid { gap: 4px; }
+  .mab { padding: 8px 6px; font-size: 11px; }
+  .mab.otro { font-size: 11px; }
+  .pb-st-big { width: 26px; height: 22px; }
+  .pb-st-big svg { width: 11px; height: 11px; }
+  .pb-del-btn-v2 { width: 26px; height: 22px; }
+  .pb-del-btn-v2 svg { width: 11px; height: 11px; }
+  .pb-fin-btn { padding: 3px 6px; font-size: 9px; }
+  .pb-fin-btn svg { width: 10px; height: 10px; }
+  .p-num-big { font-size: 16px; }
+  .pf-btn { padding: 2px 6px; font-size: 9px; }
+  .pf-cnt { font-size: 7px; }
+  .peleas-toolbar { padding: 8px; gap: 4px; }
 }

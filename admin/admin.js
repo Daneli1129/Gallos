@@ -15,7 +15,7 @@ const UI_ICONS = {
   info: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
 };
 
-let peleaFilter = 'todas';
+let peleaFilter = 'activa';
 function setPeleaFilter(f) { peleaFilter = f; renderPeleas(); }
 
 // ── TABS DE ADMIN ─────────────────────────────────────────
@@ -87,13 +87,16 @@ function setTab(tab) {
   document.getElementById(`ni-${tab}`)?.classList.add('active');
   document.getElementById(`mob-ni-${tab}`)?.classList.add('active');
 
-  if (tab === 'fichas' && !selectedJugador) {
-    document.getElementById('fichas-empty').style.display = 'flex';
-    document.getElementById('fichas-empty').innerHTML = `
-      <div style="color:var(--text3); opacity:0.6; margin-bottom:12px;">${UI_ICONS.user}</div>
-      <p>Selecciona un apostador para ver su ficha</p>
-    `;
-    document.getElementById('ficha-detail').style.display = 'none';
+  if (tab === 'fichas') {
+    renderJugList(jugadores);
+    if (!selectedJugador) {
+      document.getElementById('fichas-empty').style.display = 'flex';
+      document.getElementById('fichas-empty').innerHTML = `
+        <div style="color:var(--text3); opacity:0.6; margin-bottom:12px;">${UI_ICONS.user}</div>
+        <p>Selecciona un apostador para ver su ficha</p>
+      `;
+      document.getElementById('ficha-detail').style.display = 'none';
+    }
   }
   if (tab === 'dashboard') renderDashboard();
   if (tab === 'peleas')    renderPeleas();
@@ -143,13 +146,15 @@ function renderDashboard() {
     const { enJuego } = calcFicha(j);
     return s + enJuego.reduce((a, b) => a + b.monto, 0);
   }, 0);
-  const payoutRojo = totalVerde * 0.9;
-  const payoutVerde = totalRojo * 0.9;
+  const coef = 1 - (appConfig.comision_porcentaje / 100);
+  const payoutRojo = totalVerde * coef;
+  const payoutVerde = totalRojo * coef;
   const exposure = Math.abs(payoutRojo - payoutVerde);
   const pctRojo = totalDinero > 0 ? Math.round(totalRojo / totalDinero * 100) : 50;
   const pctVerde = 100 - pctRojo;
-  const comisionGarantizada = Math.min(totalRojo, totalVerde) * 0.1;
-  const comisionMax = Math.max(totalRojo, totalVerde) * 0.1;
+  const comPct = appConfig.comision_porcentaje / 100;
+  const comisionGarantizada = Math.min(totalRojo, totalVerde) * comPct;
+  const comisionMax = Math.max(totalRojo, totalVerde) * comPct;
   const pctComision = totalDinero > 0 ? (comisionGarantizada / totalDinero * 100).toFixed(1) : '0.0';
 
   const top = [...jugadores]
@@ -429,7 +434,7 @@ function renderFicha() {
         ${p ? `<span class="pnum">P${p.pelea}</span><span class="pm neg">${fmt(p.monto)}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
       </div>
       <div class="fc-cell">
-        ${g ? `<span class="pnum">P${g.pelea}</span><span class="pm pos">${fmt(g.monto * 0.9)}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
+        ${g ? `<span class="pnum">P${g.pelea}</span><span class="pm pos">${fmt(g.monto * (1 - appConfig.comision_porcentaje / 100))}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
       </div>
     </div>`;
   }
@@ -550,17 +555,16 @@ function renderPeleas() {
       return b.num - a.num;
     })
     .filter(p => {
-      const matchFilter = peleaFilter === 'todas' || p.estado === peleaFilter;
+      const matchFilter = p.estado === peleaFilter;
       const matchSearch = !searchPeleaQuery || String(p.num).includes(searchPeleaQuery);
       return matchFilter && matchSearch;
     });
   if (!lista.length) {
     sc.innerHTML = `<div class="pb-empty">${
       searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
-      peleaFilter === 'todas' ? 'No hay peleas registradas.' :
       peleaFilter === 'activa' ? 'No hay peleas en juego.' :
-      peleaFilter === 'espera' ? 'No hay peleas abiertas.' :
-      'No hay peleas cerradas.'
+      peleaFilter === 'espera' ? 'No hay peleas en espera.' :
+      'No hay peleas terminadas.'
     }</div>`;
     return;
   }
@@ -579,10 +583,9 @@ function renderToolbar() {
   const cerradas = peleas.filter(p => p.estado === 'cerrada').length;
   const peleaActivaObj = peleas.find(p => p.estado === 'activa');
   const filtros = [
-    { id: 'todas',  label: `Pelea`,  count: totalPeleas },
-    { id: 'activa', label: 'En juego', count: activas },
-    { id: 'espera', label: 'Abiertas',  count: espera },
-    { id: 'cerrada',label: 'Cerradas',count: cerradas },
+    { id: 'activa', label: 'En juego',   count: activas },
+    { id: 'espera', label: 'En espera',  count: espera },
+    { id: 'cerrada',label: 'Terminadas', count: cerradas },
   ];
 
   // Banner de pelea activa
@@ -603,8 +606,7 @@ function renderToolbar() {
   }
 
   tb.innerHTML = `
-    <div class="p-num-big">Pelea</div>
-    <span class="p-num-sub">${totalPeleas} peleas · #${peleaActual}</span>
+    <div class="p-num-big">⚔️ Peleas</div>
     <div class="ctrl-sep"></div>
     <div class="search-box p-search">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -612,19 +614,11 @@ function renderToolbar() {
     </div>
     <div class="pf-row">
       ${filtros.map(f => `
-        <button class="pf-btn${peleaFilter === f.id ? ' active' : ''}"
+        <button class="pf-btn ${f.id}${peleaFilter === f.id ? ' active' : ''}"
                 onclick="setPeleaFilter('${f.id}')">
           <span class="pf-lbl">${f.label}</span>
           <span class="pf-cnt">${f.count}</span>
         </button>`).join('')}
-    </div>
-    <div class="view-ctrls">
-      <button class="vc-btn" onclick="expandirTodas()" title="Expandir todas">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>
-      </button>
-      <button class="vc-btn" onclick="colapsarTodas()" title="Colapsar todas">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 9 12 15 6 9"/></svg>
-      </button>
     </div>
     <div class="ctrl-sep"></div>
     <span class="ro-badge">Solo lectura</span>`;
@@ -639,16 +633,6 @@ function renderToolbar() {
     const toolbar = document.getElementById('peleas-toolbar');
     toolbar.insertAdjacentElement('afterend', bannerEl.firstElementChild);
   }
-}
-
-function expandirTodas() {
-  peleas.forEach(p => p.minimizada = false);
-  renderPeleas();
-}
-
-function colapsarTodas() {
-  peleas.forEach(p => p.minimizada = true);
-  renderPeleas();
 }
 
 function toggleMin(num) {
@@ -748,12 +732,12 @@ function buildPB(p) {
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Rojo</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * 0.9)}</span>
+          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Verde</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * 0.9)}</span>
+          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
       </div>`}`;
   return div;
@@ -783,7 +767,7 @@ function renderPeriodo(tipo) {
           ${p ? `<span class="pnum">P${p.pelea}</span><span class="pm neg">${fmt(p.monto)}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
         </div>
         <div class="mf-cell">
-          ${g ? `<span class="pnum">P${g.pelea}</span><span class="pm pos">${fmt(g.monto * 0.9)}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
+          ${g ? `<span class="pnum">P${g.pelea}</span><span class="pm pos">${fmt(g.monto * (1 - appConfig.comision_porcentaje / 100))}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
         </div>
       </div>`;
     }
@@ -1051,7 +1035,7 @@ function buildPDF(j, tipo) {
     // Columna Ganancias
     if (g) {
       doc.text(`#${g.pelea}`, mg + colW + padX, y + 4.5);
-      doc.text(fmt(g.monto * 0.9), mg + colW * 2 - padX, y + 4.5, { align: 'right' });
+      doc.text(fmt(g.monto * (1 - appConfig.comision_porcentaje / 100)), mg + colW * 2 - padX, y + 4.5, { align: 'right' });
     } else {
       doc.setTextColor(200, 200, 200);
       doc.text('—', mg + colW + colW / 2, y + 4.5, { align: 'center' });
