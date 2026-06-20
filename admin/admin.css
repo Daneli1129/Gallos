@@ -1710,4 +1710,43 @@
 }
 .config-btn-danger:active {
   transform: scale(.97);
-}
+}
+
+/* ── OJO DECORATIVO CONFIG PIN ── */
+.config-eye-btn {
+  opacity: .65;
+  transition: opacity .3s;
+}
+.config-eye-btn:hover { opacity: .85; }
+.config-eye-btn.showing { opacity: 1; }
+.config-eye-btn .eye-svg {
+  display: block;
+  width: 18px; height: 18px;
+  transition: opacity .3s, transform .3s;
+}
+.config-eye-btn.showing .eye-pupil {
+  transform: scale(0.6);
+}
+.config-eye-btn .eye-pupil {
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.config-eye-btn .eye-slash {
+  stroke-dasharray: 23;
+  stroke-dashoffset: 23;
+  transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.config-eye-btn.showing .eye-slash {
+  stroke-dashoffset: 0;
+}
+.config-eye-btn .eye-svg.eye-pulse-now {
+  animation: parpadeoOjoConfig .5s ease-out;
+}
+@keyframes parpadeoOjoConfig {
+  0% { opacity: .5; transform: scale(1); }
+  20% { opacity: .9; transform: scale(1.08); }
+  40% { opacity: .3; transform: scaleY(.6); }
+  60% { opacity: .7; transform: scale(1.05); }
+  100% { opacity: .5; transform: scale(1); }
+}
+

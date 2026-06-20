@@ -526,7 +526,7 @@ input::-ms-clear {
 .mobile-bottom-nav {
   display: none;
   position: fixed;
-  bottom: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   left: 12px;
   right: 12px;
   height: var(--bnh);
@@ -555,7 +555,8 @@ input::-ms-clear {
   display: none;
   background: linear-gradient(90deg, #181818, #0a0a0a);
   border-bottom: 1px solid var(--border2);
-  padding: 0 12px; height: 52px;
+  padding: env(safe-area-inset-top, 0px) 12px 0;
+  height: calc(52px + env(safe-area-inset-top, 0px));
   align-items: center; gap: 10px; flex-shrink: 0; position: relative;
 }
 .mob-header-bar::after {
@@ -791,8 +792,8 @@ input::-ms-clear {
   .scroll-area { padding: 12px; }
   .mobile-bottom-nav { display: flex; }
   .mob-drawer { display: block; }
-  .tab-content.visible { padding-bottom: var(--bnh); }
-  .toast { bottom: calc(var(--bnh) + 10px); right: 12px; left: 12px; max-width: unset; }
+  .tab-content.visible { padding-bottom: calc(var(--bnh) + 16px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(var(--bnh) + 16px + env(safe-area-inset-bottom, 0px)); right: 12px; left: 12px; max-width: unset; }
   .confirm-box { padding: 20px 16px 14px; }
   .confirm-icon { font-size: 26px; }
   .confirm-msg { font-size: 13px; }
@@ -804,15 +805,15 @@ input::-ms-clear {
   .detail { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
   .topbar { display: none; }
   .mob-header-bar { display: flex; }
-  .tab-content.visible { padding-bottom: var(--bnh); }
+  .tab-content.visible { padding-bottom: calc(var(--bnh) + 16px + env(safe-area-inset-bottom, 0px)); }
   .mobile-bottom-nav { display: flex; }
   .mob-drawer { display: block; }
   .scroll-area { padding: 10px; }
-  .toast { bottom: calc(var(--bnh) + 10px); right: 12px; left: 12px; max-width: unset; }
+  .toast { bottom: calc(var(--bnh) + 16px + env(safe-area-inset-bottom, 0px)); right: 12px; left: 12px; max-width: unset; }
   .mob-header-bar { padding: 8px 10px; gap: 6px; }
   .mob-sel { font-size: 13px; letter-spacing: .5px; }
   .mob-tb-logout { padding: 5px 7px; font-size: 10px; }
-  .mob-drawer-panel { max-height: 95vh; border-radius: 14px 14px 0 0; }
+  .mob-drawer-panel { max-height: 95vh; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
   .mob-drawer-head { padding: 9px 11px 7px; }
   .mob-drawer-body { padding: 5px; }
   .mob-drawer-title { font-size: 10px; }
@@ -830,5 +831,83 @@ input::-ms-clear {
   .mob-drawer-panel { max-height: 98vh; border-radius: 12px 12px 0 0; }
   .confirm-box { padding: 14px 10px 10px; }
   .confirm-msg { font-size: 11px; }
-  .toast { bottom: calc(var(--bnh) + 6px); right: 6px; left: 6px; padding: 6px 9px; font-size: 11px; }
+  .toast { bottom: calc(var(--bnh) + 10px + env(safe-area-inset-bottom, 0px)); right: 6px; left: 6px; padding: 6px 9px; font-size: 11px; }
 }
+
+/* ── SCROLLABLE BET LIST (.ap-list) ── */
+.ap-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.ap-list::-webkit-scrollbar {
+  width: 3px;
+}
+.ap-list::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.25);
+  border-radius: 2px;
+}
+.ap-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 168, 76, 0.5);
+}
+
+/* ── MOBILE ACCOUNT USER BADGE ── */
+.mob-user-badge {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+.mob-u-av {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold3), #2A2A2A);
+  border: 1.5px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 0 10px rgba(201, 168, 76, 0.2);
+}
+
+/* ── OJO DECORATIVO GENERAL ── */
+.eye-deco {
+  opacity: .65;
+  transition: opacity .3s;
+}
+.eye-deco:hover { opacity: .85; }
+.eye-deco.showing { opacity: 1; }
+.eye-svg {
+  display: block;
+  transition: opacity .3s, transform .3s;
+}
+.eye-deco.showing .eye-pupil {
+  transform: scale(0.6);
+}
+.eye-pupil {
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.eye-slash {
+  stroke-dasharray: 23;
+  stroke-dashoffset: 23;
+  transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.eye-deco.showing .eye-slash {
+  stroke-dashoffset: 0;
+}
+.eye-svg.eye-pulse-now {
+  animation: parpadeoOjoGlobal .5s ease-out;
+}
+@keyframes parpadeoOjoGlobal {
+  0% { opacity: .5; transform: scale(1); }
+  20% { opacity: .9; transform: scale(1.08); }
+  40% { opacity: .3; transform: scaleY(.6); }
+  66% { opacity: .7; transform: scale(1.05); }
+  100% { opacity: .5; transform: scale(1); }
+}
+

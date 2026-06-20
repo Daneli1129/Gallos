@@ -13,11 +13,27 @@ const TABS_EMP = [
 // ── INIT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForAuth();
-  const u = currentUser || { nombre: 'Empleado', rol: 'empleado' };
+  if (!currentUser) {
+    window.location.href = '../index.html';
+    return;
+  }
+  if (currentUser.rol !== 'empleado') {
+    if (currentUser.rol === 'admin') {
+      window.location.href = '../admin/index.html';
+    } else {
+      window.location.href = '../index.html';
+    }
+    return;
+  }
+
+  const u = currentUser;
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
   document.getElementById('tb-av').textContent = initials(u.nombre);
   document.getElementById('tb-un').textContent = u.nombre;
+
+  const mobAv = document.getElementById('mob-av-circle');
+  if (mobAv) mobAv.textContent = initials(u.nombre);
 
   buildNav();
   buildMobNav();
@@ -345,8 +361,8 @@ function buildPB(p) {
       </button>`}
     </div>` : '';
 
-  // ── Botón Finalizar (solo si no está cerrada y tiene apuestas) ──
-  const finalizarBtn = !isCerrada && p.apuestas.length > 0 ? `
+  // ── Botón Finalizar (solo si está activa y tiene apuestas) ──
+  const finalizarBtn = isActiva && p.apuestas.length > 0 ? `
     <button class="pb-fin-btn" onclick="event.stopPropagation();toggleFinalizarPanel(${p.num})" title="Finalizar pelea">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       Finalizar
@@ -455,11 +471,15 @@ function buildPB(p) {
       <div class="p-cols">
         <div class="col-r">
           <div class="col-hdr r"><span class="col-dot"></span> Rojo <span class="col-pct">${pctR}%</span></div>
-          ${buildRows(rojos)}
+          <div class="ap-list">
+            ${buildRows(rojos)}
+          </div>
         </div>
-        <div>
+        <div class="col-v">
           <div class="col-hdr v"><span class="col-dot"></span> Verde <span class="col-pct">${pctV}%</span></div>
-          ${buildRows(verdes)}
+          <div class="ap-list">
+            ${buildRows(verdes)}
+          </div>
         </div>
       </div>
       ${addBtn}
@@ -507,6 +527,11 @@ async function elimDePelea(pN, apId) {
 }
 
 async function ganarPelea(pN, ganador) {
+  const p = getPelea(pN);
+  if (!p || p.estado !== 'activa') {
+    toast(`No se puede finalizar la Pelea #${pN} porque no está activa.`, 'error');
+    return;
+  }
   let confirmMsg = `¿Cerrar pelea con ganador <strong>${ganador === 'verde' ? 'Verde' : 'Rojo'}</strong> en Pelea #<strong>${pN}</strong>?`;
   if (ganador === 'empate') {
     confirmMsg = `¿Cerrar Pelea #<strong>${pN}</strong> declarando <strong>Empate (Tabla)</strong>?`;
@@ -846,8 +871,8 @@ function renderModalStep() {
     const j = jugadores.find(x => x.id === m.jugadorId);
     const saldoMonto = j ? calcFicha(j).saldo : 0;
     const nextSaldo = saldoMonto - m.monto;
-    const isOverLimit = j && (nextSaldo < -appConfig.limite_credito);
-    const isSaldoNeg = !isOverLimit && j && (saldoMonto < 0);
+    const isOverLimit = nextSaldo < -appConfig.limite_credito;
+    const isSaldoNeg = !isOverLimit && (saldoMonto < 0);
 
     let alertH = '';
     if (m.esNuevo) {
@@ -880,7 +905,29 @@ function renderModalStep() {
       pinInput = `
         <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 6px;">
           <label style="font-size:9px; font-weight:700; text-transform:uppercase; color:var(--rojo2); font-family:'JetBrains Mono',monospace;">PIN de Autorización del Supervisor</label>
-          <input type="password" id="modal-pin-auth" class="modal-otro-inp" style="border-color:rgba(231,76,60,.4); margin-top:0; padding:10px; font-size:16px;" placeholder="PIN de 4 dígitos">
+          <div style="position: relative;">
+            <input type="password" id="modal-pin-auth" class="modal-otro-inp" style="border-color:rgba(231,76,60,.4); margin-top:0; padding:10px 42px 10px 10px; font-size:16px; width: 100%;" placeholder="" maxlength="4" pattern="\\d*" inputmode="numeric">
+            <button class="emp-modal-eye-btn eye-deco" type="button" aria-label="Mostrar PIN" onclick="toggleEmpModalPinVisibility()" style="
+              position: absolute;
+              right: 10px;
+              top: 50%;
+              transform: translateY(-50%);
+              border: none;
+              background: transparent;
+              color: rgba(255,255,255,0.4);
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 0;
+            ">
+              <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+                <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-pupil" cx="12" cy="12" r="3"/>
+                <line class="eye-slash" x1="4" y1="4" x2="20" y2="20"/>
+              </svg>
+            </button>
+          </div>
         </div>
       `;
     }
@@ -1091,8 +1138,8 @@ async function modalConfirm() {
   const j = jugadores.find(x => x.id === jId);
   const prevSaldo = j ? calcFicha(j).saldo : 0;
   const nextSaldo = prevSaldo - m.monto;
-  const isOverLimit = j && (nextSaldo < -appConfig.limite_credito);
-  const isSaldoNeg = !isOverLimit && j && (prevSaldo < 0);
+  const isOverLimit = nextSaldo < -appConfig.limite_credito;
+  const isSaldoNeg = !isOverLimit && (prevSaldo < 0);
 
   // Validar PIN de supervisor si excede límite de crédito
   if (isOverLimit) {
@@ -1107,9 +1154,51 @@ async function modalConfirm() {
     }
   }
 
-  // Crear apuesta
-  const id = Date.now().toString();
+  // ── VALIDACIÓN: BANDO ÚNICO Y ACUMULACIÓN ──
+  const p = getPelea(m.peleaNum);
+  const existingOtherBando = p.apuestas.find(a => a.jugadorId === jId && a.bando !== m.bando);
+  if (existingOtherBando) {
+    toast(`El apostador ya tiene una apuesta en el bando contrario (${existingOtherBando.bando === 'verde' ? 'Verde' : 'Rojo'}) en esta pelea.`, 'error');
+    return;
+  }
 
+  const existingSameBando = p.apuestas.find(a => a.jugadorId === jId && a.bando === m.bando);
+  if (existingSameBando) {
+    const nuevoMonto = existingSameBando.monto + m.monto;
+    const { error } = await sb
+      .from('apuestas')
+      .update({
+        monto: nuevoMonto,
+        autorizado_por: (isSaldoNeg || isOverLimit) && currentUser ? currentUser.id : null
+      })
+      .eq('id', existingSameBando.id);
+
+    if (error) {
+      toast(`⚠️ Error al actualizar apuesta: ${error.message}`, 'error');
+      return;
+    }
+
+    if (isOverLimit) {
+      await logAction('saldo-negativo',
+        `⚠️ ¡LÍMITE EXCEDIDO! Apuesta incrementada de ${fmt(m.monto)} (nuevo total: ${fmt(nuevoMonto)}) excede el límite de crédito (${fmt(appConfig.limite_credito)}) — <strong>${j ? j.nombre : m.nombre}</strong> (Saldo: ${fmt(prevSaldo)}) · Autorizado por PIN de Supervisor · ${nowStr()}`,
+        '!');
+    } else if (isSaldoNeg) {
+      await logAction('saldo-negativo',
+        `Apuesta incrementada autorizada con saldo negativo (${fmt(Math.abs(prevSaldo))}) — <strong>${j ? j.nombre : m.nombre}</strong> · Autorizado por <strong>${currentUser.nombre}</strong> · ${nowStr()}`,
+        '!');
+    }
+
+    await logAction('apuesta',
+      `<strong>${j ? j.nombre : m.nombre}</strong> — Aumentó apuesta a ${fmt(nuevoMonto)} (+${fmt(m.monto)}) ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · Pelea #${m.peleaNum}`,
+      '$');
+
+    closeModal();
+    await refreshData();
+    toast(`<strong>${j ? j.nombre : m.nombre}</strong> — Apuesta actualizada a ${fmt(nuevoMonto)} ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · M${m.peleaNum}`, 'success');
+    return;
+  }
+
+  // Crear apuesta nueva (si no tiene apuestas en esta pelea)
   const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', m.peleaNum).single();
   if (!peleaDb) {
     toast(`Pelea #${m.peleaNum} no encontrada.`, 'error');
@@ -1155,6 +1244,23 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (e.key.toLowerCase() === 'n') { nuevaPelea(); e.preventDefault(); }
 });
+
+function toggleEmpModalPinVisibility() {
+  const pinInp = document.getElementById('modal-pin-auth');
+  const eyeBtn = document.querySelector('.emp-modal-eye-btn');
+  if (!pinInp || !eyeBtn) return;
+  const hidden = pinInp.type === 'password';
+  pinInp.type = hidden ? 'text' : 'password';
+  eyeBtn.classList.toggle('showing', hidden);
+  eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar PIN' : 'Mostrar PIN');
+  const svg = eyeBtn.querySelector('.eye-svg');
+  if (svg) {
+    svg.classList.remove('eye-pulse-now');
+    void svg.offsetWidth;
+    svg.classList.add('eye-pulse-now');
+    setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
+  }
+}
 
 
 

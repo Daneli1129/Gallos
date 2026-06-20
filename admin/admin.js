@@ -32,11 +32,27 @@ const TABS_ADMIN = [
 // ── INIT ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForAuth();
-  const u = currentUser || { nombre: 'Admin', rol: 'admin' };
+  if (!currentUser) {
+    window.location.href = '../index.html';
+    return;
+  }
+  if (currentUser.rol !== 'admin') {
+    if (currentUser.rol === 'empleado') {
+      window.location.href = '../empleado/index.html';
+    } else {
+      window.location.href = '../index.html';
+    }
+    return;
+  }
+
+  const u = currentUser;
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
   document.getElementById('tb-av').textContent  = initials(u.nombre);
   document.getElementById('tb-un').textContent  = u.nombre;
+  
+  const mobAv = document.getElementById('mob-av-circle');
+  if (mobAv) mobAv.textContent = initials(u.nombre);
 
   buildNav();
   buildMobNav();
@@ -721,11 +737,15 @@ function buildPB(p) {
       <div class="p-cols">
         <div class="col-r">
           <div class="col-hdr r"><span class="col-dot"></span> Rojo <span class="col-pct">${pctR}%</span></div>
-          ${buildRows(rojos)}
+          <div class="ap-list">
+            ${buildRows(rojos)}
+          </div>
         </div>
-        <div>
+        <div class="col-v">
           <div class="col-hdr v"><span class="col-dot"></span> Verde <span class="col-pct">${pctV}%</span></div>
-          ${buildRows(verdes)}
+          <div class="ap-list">
+            ${buildRows(verdes)}
+          </div>
         </div>
       </div>
       <div class="pb-reparte">
@@ -745,12 +765,38 @@ function buildPB(p) {
 
 
 // ── DIARIO / SEMANAL ──────────────────────────────────────
+let searchDiarioQuery = '';
+let searchSemanalQuery = '';
+
+function searchPeriodo(tipo, val) {
+  if (tipo === 'diario') searchDiarioQuery = val.trim();
+  else searchSemanalQuery = val.trim();
+  renderPeriodo(tipo);
+
+  // Restore focus and cursor position after render
+  setTimeout(() => {
+    const inp = document.getElementById(`search-periodo-${tipo}`);
+    if (inp) {
+      inp.focus();
+      const length = inp.value.length;
+      inp.setSelectionRange(length, length);
+    }
+  }, 10);
+}
+
 function renderPeriodo(tipo) {
   const el       = document.getElementById(`${tipo}-wrap`);
   const esDiario = tipo === 'diario';
-  const participaron = jugadores.filter(j => j.apuestas.length > 0);
-  const ganados  = participaron.filter(j => calcFicha(j).saldo > 0);
-  const perdidos = participaron.filter(j => calcFicha(j).saldo < 0);
+  const todosParticiparon = jugadores.filter(j => j.apuestas.length > 0);
+  const query = esDiario ? searchDiarioQuery : searchSemanalQuery;
+  const queryLower = query.toLowerCase();
+  
+  const participaron = todosParticiparon.filter(j => 
+    !query || j.nombre.toLowerCase().includes(queryLower) || j.id.toLowerCase().includes(queryLower)
+  );
+
+  const ganados  = todosParticiparon.filter(j => calcFicha(j).saldo > 0);
+  const perdidos = todosParticiparon.filter(j => calcFicha(j).saldo < 0);
   const tG = ganados.reduce((s, j) => s + calcFicha(j).saldo, 0);
   const tP = perdidos.reduce((s, j) => s + Math.abs(calcFicha(j).saldo), 0);
   const corte = tP - tG;
@@ -804,10 +850,21 @@ function renderPeriodo(tipo) {
   }).join('');
 
   el.innerHTML = `
-    <div class="ph-hdr">
-      <div class="ph-hdr-t">${esDiario ? 'Corte Diario' : 'Corte Semanal'}</div>
-      <div class="ph-hdr-s">${today()} · ${participaron.length} participantes</div>
-      <div class="ph-stats">
+    <div class="ph-hdr" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; width:100%;">
+        <div style="flex:1; min-width:200px;">
+          <div class="ph-hdr-t">${esDiario ? 'Corte Diario' : 'Corte Semanal'}</div>
+          <div class="ph-hdr-s">${today()} · ${todosParticiparon.length} participantes</div>
+        </div>
+        <button class="ph-dl" style="margin-top:0;" onclick="exportPDF_bulk('${tipo}')">${I.dl} Descargar PDF</button>
+      </div>
+
+      <div class="search-box" style="max-width:320px; width:100%; margin-top:2px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-periodo-${tipo}" placeholder="Buscar apostador..." value="${query}" oninput="searchPeriodo('${tipo}', this.value)">
+      </div>
+
+      <div class="ph-stats" style="margin-top:4px;">
         <div class="ph-stat g">
           <span class="ph-stat-val">${ganados.length}</span>
           <span class="ph-stat-lbl">Ganan</span>
@@ -1188,9 +1245,29 @@ function renderConfig() {
 
         <div class="config-group">
           <label class="config-label">PIN de Autorización del Supervisor</label>
-          <div class="config-input-wrapper">
+          <div class="config-input-wrapper" style="position: relative;">
             <span class="config-input-prefix">🔑</span>
-            <input type="password" id="cfg-pin" class="config-input" value="${appConfig.pin_autorizacion}">
+            <input type="password" id="cfg-pin" class="config-input" maxlength="4" pattern="\\d*" inputmode="numeric" value="${appConfig.pin_autorizacion}" style="padding-right: 42px;">
+            <button class="config-eye-btn eye-deco" type="button" aria-label="Mostrar PIN" onclick="togglePinVisibility()" style="
+              position: absolute;
+              right: 8px;
+              top: 50%;
+              transform: translateY(-50%);
+              border: none;
+              background: transparent;
+              color: rgba(255,255,255,0.4);
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 0;
+            ">
+              <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
+                <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle class="eye-pupil" cx="12" cy="12" r="3"/>
+                <line class="eye-slash" x1="4" y1="4" x2="20" y2="20"/>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -1221,8 +1298,13 @@ async function saveConfig() {
     toast('Límite de crédito inválido.', 'error');
     return;
   }
+  const pinRegex = /^\d{4}$/;
   if (!pin) {
     toast('El PIN no puede estar vacío.', 'error');
+    return;
+  }
+  if (!pinRegex.test(pin)) {
+    toast('El PIN debe ser de exactamente 4 dígitos numéricos.', 'error');
     return;
   }
 
@@ -1245,6 +1327,23 @@ async function saveConfig() {
     toast('Configuración guardada correctamente.', 'success');
   } else {
     toast('Ocurrió un error al guardar la configuración.', 'error');
+  }
+}
+
+function togglePinVisibility() {
+  const pinInp = document.getElementById('cfg-pin');
+  const eyeBtn = document.querySelector('.config-eye-btn');
+  if (!pinInp || !eyeBtn) return;
+  const hidden = pinInp.type === 'password';
+  pinInp.type = hidden ? 'text' : 'password';
+  eyeBtn.classList.toggle('showing', hidden);
+  eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar PIN' : 'Mostrar PIN');
+  const svg = eyeBtn.querySelector('.eye-svg');
+  if (svg) {
+    svg.classList.remove('eye-pulse-now');
+    void svg.offsetWidth;
+    svg.classList.add('eye-pulse-now');
+    setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
   }
 }
 
