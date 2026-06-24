@@ -15,7 +15,10 @@ const UI_ICONS = {
   info: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
 };
 
-let peleaFilter = 'activa';
+let peleaFilter = 'espera';
+let activeDetailPeleaNum = null;
+let selectedJugadorDiario = null;
+let selectedJugadorSemanal = null;
 function setPeleaFilter(f) { peleaFilter = f; renderPeleas(); }
 
 // ── TABS DE ADMIN ─────────────────────────────────────────
@@ -48,9 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const u = currentUser;
   document.getElementById('nav-av').textContent = initials(u.nombre);
   document.getElementById('nav-un').textContent = u.nombre;
-  document.getElementById('tb-av').textContent  = initials(u.nombre);
-  document.getElementById('tb-un').textContent  = u.nombre;
-  
+  document.getElementById('tb-av').textContent = initials(u.nombre);
+  document.getElementById('tb-un').textContent = u.nombre;
+
   const mobAv = document.getElementById('mob-av-circle');
   if (mobAv) mobAv.textContent = initials(u.nombre);
 
@@ -59,8 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await refreshData();
   initRealtime();
-  
-  setTab('peleas');
+
+  setTab('dashboard');
 });
 
 // ── NAV ───────────────────────────────────────────────────
@@ -115,11 +118,11 @@ function setTab(tab) {
     }
   }
   if (tab === 'dashboard') renderDashboard();
-  if (tab === 'peleas')    renderPeleas();
-  if (tab === 'diario')    renderPeriodo('diario');
-  if (tab === 'semanal')   renderPeriodo('semanal');
-  if (tab === 'bitacora')  renderBitacora();
-  if (tab === 'config')    renderConfig();
+  if (tab === 'peleas') renderPeleas();
+  if (tab === 'diario') renderPeriodo('diario');
+  if (tab === 'semanal') renderPeriodo('semanal');
+  if (tab === 'bitacora') renderBitacora();
+  if (tab === 'config') renderConfig();
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
@@ -175,8 +178,7 @@ function renderDashboard() {
 
   const top = [...jugadores]
     .map(j => ({ ...j, apCount: j.apuestas.length, ficha: calcFicha(j) }))
-    .sort((a, b) => b.ficha.totalPerdidas + b.ficha.totalGanadas - (a.ficha.totalPerdidas + a.ficha.totalGanadas))
-    .slice(0, 5);
+    .sort((a, b) => b.ficha.totalPerdidas + b.ficha.totalGanadas - (a.ficha.totalPerdidas + a.ficha.totalGanadas));
 
   const activos = jugadores.filter(j => j.apuestas.some(a => !a.resultado)).length;
   const ganadores = jugadores.filter(j => calcFicha(j).saldo > 0).length;
@@ -185,7 +187,7 @@ function renderDashboard() {
   el.innerHTML = `
     <div class="dash">
       <div class="dash-hdr">
-        <div class="dash-kicker">GALLO GOLD · BRUNO'S</div>
+        <div class="dash-kicker">GALLO GOLD · BY PINITOS</div>
         <div class="dash-hdr-title">Panel de Control</div>
         <div class="dash-hdr-sub">${today()} · ${nowStr()}</div>
       </div>
@@ -315,11 +317,11 @@ function renderDashboard() {
         </div>
         <div class="dash-rank">
           ${top.map((j, i) => {
-            const medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
-            const posBadge = medals[i] 
-              ? `<span class="dash-rank-medal" title="Top ${i+1}">${medals[i]}</span>` 
-              : `<span class="dash-rank-pos">${i + 1}</span>`;
-            return `
+    const medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
+    const posBadge = medals[i]
+      ? `<span class="dash-rank-medal" title="Top ${i + 1}">${medals[i]}</span>`
+      : `<span class="dash-rank-pos">${i + 1}</span>`;
+    return `
             <div class="dash-rank-item" onclick="selectJugador(jugadores.find(x=>x.id==='${j.id}')); setTab('fichas');">
               ${posBadge}
               <div class="dash-rank-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
@@ -331,7 +333,7 @@ function renderDashboard() {
                 ${j.ficha.saldo >= 0 ? '+' : '−'}${fmt(j.ficha.saldo)}
               </div>
             </div>`;
-          }).join('')}
+  }).join('')}
         </div>
       </div>
     </div>`;
@@ -357,10 +359,10 @@ function renderMobJugList(list) {
   const sorted = [...list].sort((a, b) => b.apuestas.length - a.apuestas.length);
   sorted.forEach((j, idx) => {
     const { saldo, ganadas, perdidas, enJuego } = calcFicha(j);
-    const sc   = saldo > 0 ? 'sp' : saldo < 0 ? 'sn' : 'sz';
+    const sc = saldo > 0 ? 'sp' : saldo < 0 ? 'sn' : 'sz';
     const sign = saldo >= 0 ? '+' : '−';
     const gLen = ganadas.length, pLen = perdidas.length, eLen = enJuego.length;
-    const d    = document.createElement('div');
+    const d = document.createElement('div');
     d.className = `p-card${selectedJugador?.id === j.id ? ' active' : ''}`;
     d.innerHTML = `
       <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
@@ -392,10 +394,10 @@ function renderJugList(list) {
   const sorted = [...list].sort((a, b) => b.apuestas.length - a.apuestas.length);
   sorted.forEach((j, idx) => {
     const { saldo, ganadas, perdidas, enJuego } = calcFicha(j);
-    const sc   = saldo > 0 ? 'sp' : saldo < 0 ? 'sn' : 'sz';
+    const sc = saldo > 0 ? 'sp' : saldo < 0 ? 'sn' : 'sz';
     const sign = saldo >= 0 ? '+' : '−';
     const gLen = ganadas.length, pLen = perdidas.length, eLen = enJuego.length;
-    const d    = document.createElement('div');
+    const d = document.createElement('div');
     d.className = `p-card${selectedJugador?.id === j.id ? ' active' : ''}`;
     d.innerHTML = `
       <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
@@ -425,21 +427,21 @@ function selectJugador(j) {
 
 // ── FICHAS (solo lectura) ─────────────────────────────────
 function renderFicha() {
-  const empty  = document.getElementById('fichas-empty');
+  const empty = document.getElementById('fichas-empty');
   const detail = document.getElementById('ficha-detail');
 
   if (!selectedJugador) {
-    empty.style.display  = 'flex';
+    empty.style.display = 'flex';
     detail.style.display = 'none';
     return;
   }
-  empty.style.display  = 'none';
+  empty.style.display = 'none';
   detail.style.display = 'block';
 
   const j = selectedJugador;
   const { saldo, ganadas, perdidas, enJuego, totalGanadas, totalPerdidas, saldoAntTotal } = calcFicha(j);
   const esBien = saldo >= 0;
-  const sign   = esBien ? '+' : '−';
+  const sign = esBien ? '+' : '−';
   const maxRows = Math.max(perdidas.length, ganadas.length, 1);
 
   let rows = '';
@@ -495,7 +497,9 @@ function renderFicha() {
           <div style="border-right:1px solid var(--border2);"><div class="fc-col-hd p">Perdidas</div></div>
           <div><div class="fc-col-hd g">Ganadas</div></div>
         </div>
-        ${rows}
+        <div class="fc-tabla-rows-scroll">
+          ${rows}
+        </div>
       </div>
       <div class="fc-tots">
         <div class="fc-tot-grid">
@@ -560,8 +564,16 @@ function searchPelea(val) {
 
 function renderPeleas() {
   renderToolbar();
-  const sc    = document.getElementById('peleas-scroll');
+  const sc = document.getElementById('peleas-scroll');
   sc.innerHTML = '';
+
+  // Reset scroll container layout
+  sc.style.display = '';
+  sc.style.flexDirection = '';
+  sc.style.gap = '';
+  sc.style.justifyContent = '';
+  sc.style.alignItems = '';
+
   const stateWeight = { activa: 0, espera: 1, cerrada: 2 };
   const lista = [...peleas]
     .sort((a, b) => {
@@ -575,33 +587,217 @@ function renderPeleas() {
       const matchSearch = !searchPeleaQuery || String(p.num).includes(searchPeleaQuery);
       return matchFilter && matchSearch;
     });
+
+  // If a fight details modal is open, refresh it with up-to-date data
+  if (activeDetailPeleaNum !== null) {
+    const p = peleas.find(x => x.num === activeDetailPeleaNum);
+    if (p) {
+      const detailBody = document.getElementById('pelea-detalle-body');
+      if (detailBody) {
+        detailBody.innerHTML = buildPBDetail(p);
+      }
+    } else {
+      cerrarDetallePelea();
+    }
+  }
+
   if (!lista.length) {
-    sc.innerHTML = `<div class="pb-empty">${
-      searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
-      peleaFilter === 'activa' ? 'No hay peleas en juego.' :
-      peleaFilter === 'espera' ? 'No hay peleas en espera.' :
-      'No hay peleas terminadas.'
-    }</div>`;
+    sc.innerHTML = `<div class="pb-empty">${searchPeleaQuery ? 'No se encontraron peleas con ese número.' :
+        peleaFilter === 'activa' ? 'No hay peleas en juego.' :
+          peleaFilter === 'espera' ? 'No hay peleas en espera.' :
+            'No hay peleas terminadas.'
+      }</div>`;
     return;
   }
-  lista.forEach((p, i) => {
-    const el = buildPB(p);
-    el.style.setProperty('--i', i);
-    sc.appendChild(el);
+
+  if (peleaFilter === 'cerrada') {
+    renderTerminadasAdmin(sc, lista);
+  } else {
+    lista.forEach((p, i) => {
+      const el = buildPB(p);
+      el.style.setProperty('--i', i);
+      sc.appendChild(el);
+    });
+  }
+}
+
+function renderTerminadasAdmin(sc, list) {
+  sc.style.display = 'flex';
+  sc.style.flexDirection = 'column';
+  sc.style.gap = '8px';
+  sc.style.justifyContent = 'flex-start';
+  sc.style.alignItems = 'stretch';
+
+  list.forEach((p, i) => {
+    const tR = p.apuestas.filter(a => a.bando === 'rojo').reduce((s, a) => s + a.monto, 0);
+    const tV = p.apuestas.filter(a => a.bando === 'verde').reduce((s, a) => s + a.monto, 0);
+    const total = tR + tV;
+    const comision = total * (appConfig.comision_porcentaje / 100);
+    const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
+    const pctV = 100 - pctR;
+
+    let ganadorHtml = '';
+    let ganadorColor = 'var(--text3)';
+    if (p.ganador === 'verde') {
+      ganadorHtml = `<span style="color:var(--green2);font-weight:900;font-size:13px;">● Verde</span>`;
+      ganadorColor = 'var(--green2)';
+    } else if (p.ganador === 'rojo') {
+      ganadorHtml = `<span style="color:var(--rojo2);font-weight:900;font-size:13px;">● Rojo</span>`;
+      ganadorColor = 'var(--rojo2)';
+    } else if (p.ganador === 'empate') {
+      ganadorHtml = `<span style="color:var(--gold2);font-weight:900;font-size:13px;">◆ Empate</span>`;
+      ganadorColor = 'var(--gold2)';
+    } else if (p.ganador === 'anulada') {
+      ganadorHtml = `<span style="color:var(--text3);font-weight:900;font-size:13px;">✕ Anulada</span>`;
+    } else {
+      ganadorHtml = `<span style="color:var(--text3);opacity:.5;font-size:12px;">Sin resultado</span>`;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'term-row';
+    row.style.borderLeft = `3px solid ${ganadorColor}`;
+    row.style.setProperty('--i', i);
+    row.onclick = () => abrirDetallePelea(p.num);
+
+    row.innerHTML = `
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:900;font-size:15px;color:var(--gold);text-align:center;">#${p.num}</span>
+      <div>${ganadorHtml}<div style="margin-top:3px;display:flex;gap:4px;align-items:center;">
+        <div style="height:4px;border-radius:4px;background:var(--rojo2);width:${pctR * 0.6}px;max-width:60px;"></div>
+        <div style="height:4px;border-radius:4px;background:var(--green2);width:${pctV * 0.6}px;max-width:60px;"></div>
+        <span style="font-size:9px;color:var(--text3);margin-left:2px;font-family:'JetBrains Mono',monospace;">${pctR}R·${pctV}V</span>
+      </div></div>
+      <div style="text-align:right;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:var(--text2);">${fmt(total)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px;">TOTAL</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:var(--gold);">${fmt(comision)}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px;">CASA ${appConfig.comision_porcentaje}%</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:var(--text3);">${p.apuestas.length} apuestas</div>
+      </div>`;
+    sc.appendChild(row);
   });
 }
 
+function abrirDetallePelea(num) {
+  activeDetailPeleaNum = num;
+  const p = peleas.find(x => x.num === num);
+  if (!p) return;
+  document.getElementById('pelea-detalle-title').textContent = `Detalles de Pelea #${p.num}`;
+  document.getElementById('pelea-detalle-body').innerHTML = buildPBDetail(p);
+  document.getElementById('modal-pelea-detalle').style.display = 'flex';
+}
+
+function cerrarDetallePelea() {
+  activeDetailPeleaNum = null;
+  document.getElementById('modal-pelea-detalle').style.display = 'none';
+}
+
+function buildPBDetail(p) {
+  const rojos = p.apuestas.filter(a => a.bando === 'rojo');
+  const verdes = p.apuestas.filter(a => a.bando === 'verde');
+  const tR = rojos.reduce((s, a) => s + a.monto, 0);
+  const tV = verdes.reduce((s, a) => s + a.monto, 0);
+  const tRCasado = rojos.reduce((s, a) => s + (a.montoCasado || 0), 0);
+  const tVCasado = verdes.reduce((s, a) => s + (a.montoCasado || 0), 0);
+  const total = tR + tV;
+  const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
+  const pctV = 100 - pctR;
+
+  let winnerTag = '';
+  if (p.ganador) {
+    if (p.ganador === 'empate') {
+      winnerTag = `<div class="pb-winner" style="color:var(--gold2); font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        ${I.trophy || '🏆'} Pelea declarada en <strong>Empate</strong>
+      </div>`;
+    } else if (p.ganador === 'anulada') {
+      winnerTag = `<div class="pb-winner" style="color:var(--text3); font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        ✕ Pelea <strong>Anulada / Cancelada</strong>
+      </div>`;
+    } else {
+      const wCls = p.ganador === 'verde' ? 'v' : 'r';
+      winnerTag = `<div class="pb-winner ${wCls}" style="font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+        ${I.trophy || '🏆'} Ganó <strong style="text-transform: uppercase;">${p.ganador === 'verde' ? 'Verde' : 'Rojo'}</strong>
+      </div>`;
+    }
+  } else {
+    winnerTag = `<div class="pb-winner" style="opacity:.4; font-size: 13px; margin-bottom: 12px;">Sin resultado</div>`;
+  }
+
+  const buildRows = lista => lista.length
+    ? lista.map(a => {
+      const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
+      const mc = a.resultado === 'ganada' ? ' g' : a.resultado === 'perdida' ? ' p' : '';
+      return `<div class="ap-row${cls}">
+          <span class="ap-name">${sanitize(a.nombre)}</span>
+          <span class="ap-monto${mc}">${fmt(a.monto)}</span>
+        </div>`;
+    }).join('')
+    : '<div class="ap-empty">Sin apuestas</div>';
+
+  const bar = total > 0
+    ? `<div class="pelea-bar" style="margin: 0 0 16px 0;"><div class="pb-bar-r" style="width:${pctR}%"></div><div class="pb-bar-v" style="width:${pctV}%"></div></div>`
+    : '';
+
+  return `
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; background:var(--s2); border: 1px solid var(--border2); border-radius:10px; padding:12px 16px; margin-bottom:12px;">
+        <div>
+          <div style="font-size:10px; color:var(--text3); font-family:'JetBrains Mono',monospace; font-weight:700;">VOLUMEN OPERADO</div>
+          <div style="font-size:20px; font-family:'JetBrains Mono',monospace; font-weight:900; color:var(--text2); margin-top:2px;">${fmt(total)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px; color:var(--text3); font-family:'JetBrains Mono',monospace; font-weight:700;">COMISIÓN CASA (${appConfig.comision_porcentaje}%)</div>
+          <div style="font-size:20px; font-family:'JetBrains Mono',monospace; font-weight:900; color:var(--gold); margin-top:2px;">${fmt(total * (appConfig.comision_porcentaje / 100))}</div>
+        </div>
+      </div>
+      
+      ${winnerTag}
+      ${bar}
+
+      <div class="p-cols" style="border: 1px solid var(--border2); border-radius:10px; overflow:hidden; background:rgba(0,0,0,0.15); margin-bottom:16px;">
+        <div class="col-r" style="border-right: 1px solid var(--border2);">
+          <div class="col-hdr r"><span class="col-dot"></span> Rojo <span class="col-pct">${pctR}%</span></div>
+          <div class="ap-list" style="max-height:220px; overflow-y:auto;">
+            ${buildRows(rojos)}
+          </div>
+        </div>
+        <div class="col-v">
+          <div class="col-hdr v"><span class="col-dot"></span> Verde <span class="col-pct">${pctV}%</span></div>
+          <div class="ap-list" style="max-height:220px; overflow-y:auto;">
+            ${buildRows(verdes)}
+          </div>
+        </div>
+      </div>
+
+      <div class="pb-reparte" style="border: 1px solid var(--border2); border-radius:10px; overflow:hidden;">
+        <div class="pb-rep-cell">
+          <span class="pb-rep-lbl">Pago Rojo</span>
+          <span class="pb-rep-arrow">→</span>
+          <span class="pb-rep-val" style="color:var(--rojo2); font-family:'JetBrains Mono',monospace;">${fmt(tVCasado * (1 - appConfig.comision_porcentaje / 100))}</span>
+        </div>
+        <div class="pb-rep-cell">
+          <span class="pb-rep-lbl">Pago Verde</span>
+          <span class="pb-rep-arrow">→</span>
+          <span class="pb-rep-val" style="color:var(--green2); font-family:'JetBrains Mono',monospace;">${fmt(tRCasado * (1 - appConfig.comision_porcentaje / 100))}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderToolbar() {
-  const tb   = document.getElementById('peleas-toolbar');
+  const tb = document.getElementById('peleas-toolbar');
   const totalPeleas = peleas.length;
   const activas = peleas.filter(p => p.estado === 'activa').length;
-  const espera  = peleas.filter(p => p.estado === 'espera').length;
+  const espera = peleas.filter(p => p.estado === 'espera').length;
   const cerradas = peleas.filter(p => p.estado === 'cerrada').length;
   const peleaActivaObj = peleas.find(p => p.estado === 'activa');
   const filtros = [
-    { id: 'activa', label: 'En juego',   count: activas },
-    { id: 'espera', label: 'En espera',  count: espera },
-    { id: 'cerrada',label: 'Terminadas', count: cerradas },
+    { id: 'espera', label: 'En espera', count: espera },
+    { id: 'activa', label: 'En juego', count: activas },
+    { id: 'cerrada', label: 'Terminadas', count: cerradas },
   ];
 
   // Banner de pelea activa
@@ -663,15 +859,17 @@ function buildPB(p) {
   const hayActiva = peleas.some(x => x.estado === 'activa');
   const estaEnCola = p.estado === 'espera' && hayActiva;
 
-  const rojos  = p.apuestas.filter(a => a.bando === 'rojo');
+  const rojos = p.apuestas.filter(a => a.bando === 'rojo');
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
-  const tR     = rojos.reduce((s, a) => s + a.monto, 0);
-  const tV     = verdes.reduce((s, a) => s + a.monto, 0);
-  const total  = tR + tV;
-  const pctR   = total > 0 ? Math.round(tR / total * 100) : 50;
-  const pctV   = 100 - pctR;
-  const pCls   = p.estado === 'activa' ? 'pill-a' : p.estado === 'espera' ? 'pill-e' : 'pill-c';
-  const pTxt   = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'Abierto' : 'Cerrado';
+  const tR = rojos.reduce((s, a) => s + a.monto, 0);
+  const tV = verdes.reduce((s, a) => s + a.monto, 0);
+  const tRCasado = rojos.reduce((s, a) => s + (a.montoCasado || 0), 0);
+  const tVCasado = verdes.reduce((s, a) => s + (a.montoCasado || 0), 0);
+  const total = tR + tV;
+  const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
+  const pctV = 100 - pctR;
+  const pCls = p.estado === 'activa' ? 'pill-a' : p.estado === 'espera' ? 'pill-e' : 'pill-c';
+  const pTxt = p.estado === 'activa' ? 'En juego' : p.estado === 'espera' ? 'Abierto' : 'Cerrado';
 
   const chevron = p.minimizada
     ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`
@@ -699,13 +897,27 @@ function buildPB(p) {
 
   const buildRows = lista => lista.length
     ? lista.map(a => {
-        const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
-        const mc  = a.resultado === 'ganada' ? ' g'  : a.resultado === 'perdida' ? ' p'  : '';
+      const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
+      const mc = a.resultado === 'ganada' ? ' g' : a.resultado === 'perdida' ? ' p' : '';
+
+      if (a.estado === 'casado' || p.estado === 'cerrada') {
         return `<div class="ap-row${cls}">
-          <span class="ap-name">${sanitize(a.nombre)}</span>
+            <span class="ap-name">${sanitize(a.nombre)}</span>
+            <span class="ap-monto${mc}">${fmt(a.monto)}</span>
+          </div>`;
+      }
+
+      return `<div class="ap-row${cls} parcial">
+          <div class="ap-info-split">
+            <span class="ap-name">${sanitize(a.nombre)}</span>
+            <div class="ap-badges">
+              ${a.montoCasado > 0 ? `<span class="badge-matched">${fmt(a.montoCasado)} Casado</span>` : ''}
+              ${a.montoPendiente > 0 ? `<span class="badge-unmatched">${fmt(a.montoPendiente)} En Cola</span>` : ''}
+            </div>
+          </div>
           <span class="ap-monto${mc}">${fmt(a.monto)}</span>
         </div>`;
-      }).join('')
+    }).join('')
     : '<div class="ap-empty">Sin apuestas</div>';
 
   const bar = total > 0
@@ -752,12 +964,12 @@ function buildPB(p) {
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Rojo</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * (1 - appConfig.comision_porcentaje / 100))}</span>
+          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tVCasado * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Verde</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * (1 - appConfig.comision_porcentaje / 100))}</span>
+          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tRCasado * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
       </div>`}`;
   return div;
@@ -765,59 +977,149 @@ function buildPB(p) {
 
 
 // ── DIARIO / SEMANAL ──────────────────────────────────────
-let searchDiarioQuery = '';
-let searchSemanalQuery = '';
-
-function searchPeriodo(tipo, val) {
-  if (tipo === 'diario') searchDiarioQuery = val.trim();
-  else searchSemanalQuery = val.trim();
+function filterJugPeriodo(tipo) {
   renderPeriodo(tipo);
+}
 
-  // Restore focus and cursor position after render
-  setTimeout(() => {
-    const inp = document.getElementById(`search-periodo-${tipo}`);
-    if (inp) {
-      inp.focus();
-      const length = inp.value.length;
-      inp.setSelectionRange(length, length);
-    }
-  }, 10);
+function selectJugadorPeriodo(tipo, j) {
+  if (tipo === 'diario') {
+    selectedJugadorDiario = j;
+  } else {
+    selectedJugadorSemanal = j;
+  }
+  renderPeriodo(tipo);
 }
 
 function renderPeriodo(tipo) {
-  const el       = document.getElementById(`${tipo}-wrap`);
+  const el = document.getElementById(`${tipo}-wrap`);
+  const headerEl = document.getElementById(`${tipo}-header`);
+  const listEl = document.getElementById(`jugadores-list-${tipo}`);
   const esDiario = tipo === 'diario';
   const todosParticiparon = jugadores.filter(j => j.apuestas.length > 0);
-  const query = esDiario ? searchDiarioQuery : searchSemanalQuery;
+
+  const query = (document.getElementById(`search-inp-${tipo}`)?.value || '').trim();
   const queryLower = query.toLowerCase();
-  
-  const participaron = todosParticiparon.filter(j => 
+
+  const participaron = todosParticiparon.filter(j =>
     !query || j.nombre.toLowerCase().includes(queryLower) || j.id.toLowerCase().includes(queryLower)
   );
 
-  const ganados  = todosParticiparon.filter(j => calcFicha(j).saldo > 0);
+  const ganados = todosParticiparon.filter(j => calcFicha(j).saldo > 0);
   const perdidos = todosParticiparon.filter(j => calcFicha(j).saldo < 0);
   const tG = ganados.reduce((s, j) => s + calcFicha(j).saldo, 0);
   const tP = perdidos.reduce((s, j) => s + Math.abs(calcFicha(j).saldo), 0);
   const corte = tP - tG;
 
-  const miniFichas = participaron.map(j => {
-    const { saldo, ganadas, perdidas, totalGanadas, saldoAntTotal } = calcFicha(j);
-    const ok = saldo >= 0;
-    const maxR = Math.max(ganadas.length, perdidas.length, 1);
-    let rows = '';
-    for (let i = 0; i < maxR; i++) {
-      const p = perdidas[i], g = ganadas[i];
-      rows += `<div class="mf-row">
-        <div class="mf-cell l">
-          ${p ? `<span class="pnum">P${p.pelea}</span><span class="pm neg">${fmt(p.monto)}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
+  // Render Top Header and Stats
+  if (headerEl) {
+    headerEl.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; width:100%;">
+        <div>
+          <div class="ph-hdr-t" style="font-size: 20px; font-weight: 800;">${esDiario ? 'Corte Diario' : 'Corte Semanal'}</div>
+          <div class="ph-hdr-s" style="font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 2px;">${today()} · ${todosParticiparon.length} participantes</div>
         </div>
-        <div class="mf-cell">
-          ${g ? `<span class="pnum">P${g.pelea}</span><span class="pm pos">${fmt(g.monto * (1 - appConfig.comision_porcentaje / 100))}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div class="ph-stats" style="margin: 0; display: flex; gap: 6px;">
+            <div class="ph-stat g" style="padding: 4px 10px; display: flex; flex-direction: row; gap: 6px; align-items: center; min-width: unset;">
+              <span class="ph-stat-lbl" style="font-size: 8px; margin:0;">Ganan</span>
+              <span class="ph-stat-val" style="font-size: 14px;">${ganados.length}</span>
+            </div>
+            <div class="ph-stat r" style="padding: 4px 10px; display: flex; flex-direction: row; gap: 6px; align-items: center; min-width: unset;">
+              <span class="ph-stat-lbl" style="font-size: 8px; margin:0;">Pierden</span>
+              <span class="ph-stat-val" style="font-size: 14px;">${perdidos.length}</span>
+            </div>
+            <div class="ph-stat c" style="padding: 4px 10px; display: flex; flex-direction: row; gap: 6px; align-items: center; min-width: unset;">
+              <span class="ph-stat-lbl" style="font-size: 8px; margin:0;">Corte</span>
+              <span class="ph-stat-val" style="font-size: 14px; color:${corte >= 0 ? 'var(--green2)' : 'var(--rojo2)'};">${fmt(corte)}</span>
+            </div>
+          </div>
+          <button class="ph-dl" style="margin: 0;" onclick="exportPDF_bulk('${tipo}')">${I.dl} Descargar Todos</button>
         </div>
       </div>`;
+  }
+
+  // Render Sidebar Player List
+  if (listEl) {
+    listEl.innerHTML = '';
+    if (participaron.length === 0) {
+      listEl.innerHTML = '<div style="padding: 12px; color: var(--text3); font-size: 12px; text-align: center;">Sin resultados</div>';
+    } else {
+      participaron.forEach(j => {
+        const { saldo } = calcFicha(j);
+        const sc = saldo > 0 ? 'sp' : saldo < 0 ? 'sn' : 'sz';
+        const sign = saldo >= 0 ? '+' : '−';
+        const activeClass = (tipo === 'diario' ? selectedJugadorDiario : selectedJugadorSemanal)?.id === j.id ? ' active' : '';
+
+        const d = document.createElement('div');
+        d.className = `p-card${activeClass}`;
+        d.innerHTML = `
+          <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
+          <div class="p-info">
+            <div class="p-name">${sanitize(j.nombre)}</div>
+            <div class="p-meta">
+              <span class="p-stats">
+                <span class="p-stat-tot">${j.apuestas.length} apuestas</span>
+              </span>
+              <span class="p-saldo ${sc}">${sign}${fmt(saldo)}</span>
+            </div>
+          </div>`;
+        d.onclick = () => selectJugadorPeriodo(tipo, j);
+        listEl.appendChild(d);
+      });
     }
-    return `<div class="mini-ficha">
+  }
+
+  // Auto-select first participant if none selected or if selected player not in list
+  let sel = tipo === 'diario' ? selectedJugadorDiario : selectedJugadorSemanal;
+  if (participaron.length > 0) {
+    if (!sel || !participaron.some(p => p.id === sel.id)) {
+      sel = participaron[0];
+      if (tipo === 'diario') selectedJugadorDiario = sel;
+      else selectedJugadorSemanal = sel;
+
+      // Re-render list to show active state on first item
+      if (listEl && listEl.firstChild) {
+        listEl.firstChild.classList.add('active');
+      }
+    }
+  } else {
+    sel = null;
+    if (tipo === 'diario') selectedJugadorDiario = null;
+    else selectedJugadorSemanal = null;
+  }
+
+  // Render Selected Player Detail Card
+  if (el) {
+    if (sel) {
+      el.innerHTML = buildMiniFicha(sel, tipo);
+    } else {
+      el.innerHTML = `
+        <div class="empty-center" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text3); opacity:0.6;">
+          <div style="font-size:40px; margin-bottom:8px;">👤</div>
+          <p>Selecciona un apostador para ver su corte</p>
+        </div>`;
+    }
+  }
+}
+
+function buildMiniFicha(j, tipo) {
+  const { saldo, ganadas, perdidas, totalGanadas, totalPerdidas, saldoAntTotal } = calcFicha(j);
+  const ok = saldo >= 0;
+  const maxR = Math.max(ganadas.length, perdidas.length, 1);
+  let rows = '';
+  for (let i = 0; i < maxR; i++) {
+    const p = perdidas[i], g = ganadas[i];
+    rows += `<div class="mf-row">
+      <div class="mf-cell l">
+        ${p ? `<span class="pnum">P${p.pelea}</span><span class="pm neg">${fmt(p.monto)}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
+      </div>
+      <div class="mf-cell">
+        ${g ? `<span class="pnum">P${g.pelea}</span><span class="pm pos">${fmt(g.monto * (1 - appConfig.comision_porcentaje / 100))}</span>` : '<span style="color:var(--text3);font-size:10px;">—</span>'}
+      </div>
+    </div>`;
+  }
+  return `
+    <div class="mini-ficha" style="max-width: 480px; width: 100%; margin: 20px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
       <div class="mf-head">
         <div class="mf-av" style="background:${j.color}22;color:${j.color};border-color:${j.color};">${initials(j.nombre)}</div>
         <div class="mf-info">
@@ -832,7 +1134,9 @@ function renderPeriodo(tipo) {
       <div class="mf-body">
         <div><div class="mf-col-hd p">Perdidas</div></div>
         <div><div class="mf-col-hd g">Ganadas</div></div>
-        ${rows}
+        <div class="mf-body-rows-scroll" style="max-height: 200px; overflow-y: auto;">
+          ${rows}
+        </div>
       </div>
       <div class="mf-tots">
         <div class="mf-ti"><span class="mf-ti-lbl">Perdido</span><span class="mf-ti-val sn">${fmt(saldoAntTotal)}</span></div>
@@ -847,106 +1151,56 @@ function renderPeriodo(tipo) {
       </div>
       <button class="mf-dl-btn" onclick="exportPDF('${j.id}','${tipo}')">${I.dl} PDF</button>
     </div>`;
-  }).join('');
-
-  el.innerHTML = `
-    <div class="ph-hdr" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; width:100%;">
-        <div style="flex:1; min-width:200px;">
-          <div class="ph-hdr-t">${esDiario ? 'Corte Diario' : 'Corte Semanal'}</div>
-          <div class="ph-hdr-s">${today()} · ${todosParticiparon.length} participantes</div>
-        </div>
-        <button class="ph-dl" style="margin-top:0;" onclick="exportPDF_bulk('${tipo}')">${I.dl} Descargar PDF</button>
-      </div>
-
-      <div class="search-box" style="max-width:320px; width:100%; margin-top:2px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="search-periodo-${tipo}" placeholder="Buscar apostador..." value="${query}" oninput="searchPeriodo('${tipo}', this.value)">
-      </div>
-
-      <div class="ph-stats" style="margin-top:4px;">
-        <div class="ph-stat g">
-          <span class="ph-stat-val">${ganados.length}</span>
-          <span class="ph-stat-lbl">Ganan</span>
-        </div>
-        <div class="ph-stat r">
-          <span class="ph-stat-val">${perdidos.length}</span>
-          <span class="ph-stat-lbl">Pierden</span>
-        </div>
-        <div class="ph-stat c">
-          <span class="ph-stat-val">${fmt(corte)}</span>
-          <span class="ph-stat-lbl">Corte</span>
-        </div>
-      </div>
-      <button class="ph-dl" onclick="exportPDF_bulk('${tipo}')">${I.dl} Descargar PDF</button>
-    </div>
-    <div class="mini-fichas-grid">
-      ${participaron.length ? miniFichas : '<div class="mf-empty">Ningún apostador con apuestas registradas.</div>'}
-    </div>`;
 }
+
 
 // ── BITÁCORA ──────────────────────────────────────────────
 const tipoLogInfo = t => ({
-  apuesta:   { label: 'Apuesta',   icon: '$', color: 'var(--accent2)' },
+  apuesta: { label: 'Apuesta', icon: '$', color: 'var(--accent2)' },
   resultado: { label: 'Resultado', icon: '✓', color: 'var(--green2)' },
-  eliminar:  { label: 'Eliminado', icon: '×', color: 'var(--rojo2)' },
-  estado:    { label: 'Estado',    icon: '•', color: 'var(--blue2)' },
+  eliminar: { label: 'Eliminado', icon: '×', color: 'var(--rojo2)' },
+  estado: { label: 'Estado', icon: '•', color: 'var(--blue2)' },
   'nueva-pelea': { label: 'Pelea', icon: '+', color: 'var(--blue2)' },
   'nuevo-jugador': { label: 'Apostador', icon: '+', color: 'var(--accent2)' },
   'saldo-negativo': { label: 'Alerta', icon: '!', color: 'var(--rojo2)' },
-  config:    { label: 'Ajustes',   icon: '⚙️', color: 'var(--gold)' },
+  config: { label: 'Ajustes', icon: '⚙️', color: 'var(--gold)' },
   corte_jornada: { label: 'Corte', icon: '🏁', color: 'var(--green2)' },
 })[t] || { label: 'Auditoría', icon: '•', color: 'var(--text3)' };
-
-const fmtTimeRel = ts => {
-  if (!ts) return '';
-  const parts = ts.split(':').map(Number);
-  if (parts.length < 2) return ts;
-  const now = new Date();
-  const then = new Date();
-  then.setHours(parts[0]||0, parts[1]||0, parts[2]||0);
-  let diffMin = Math.round((now - then) / 60000);
-  if (diffMin < 0) diffMin += 1440;
-  if (diffMin < 1) return 'ahora';
-  if (diffMin < 60) return `hace ${diffMin} min`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 12) return `hace ${diffHr}h`;
-  return ts.slice(0,5);
-};
 
 function renderBitacora() {
   const el = document.getElementById('log-wrap');
 
   const counts = {
-    todos:     bitacora.length,
-    apuesta:   bitacora.filter(x => x.tipo === 'apuesta').length,
+    todos: bitacora.length,
+    apuesta: bitacora.filter(x => x.tipo === 'apuesta').length,
     resultado: bitacora.filter(x => x.tipo === 'resultado').length,
-    eliminar:  bitacora.filter(x => x.tipo === 'eliminar').length,
-    estado:    bitacora.filter(x => ['estado','nueva-pelea','nuevo-jugador'].includes(x.tipo)).length,
+    eliminar: bitacora.filter(x => x.tipo === 'eliminar').length,
+    estado: bitacora.filter(x => ['estado', 'nueva-pelea', 'nuevo-jugador'].includes(x.tipo)).length,
   };
 
   const lista = logFiltro === 'todos'
     ? bitacora
     : logFiltro === 'estado'
-      ? bitacora.filter(x => ['estado','nueva-pelea','nuevo-jugador'].includes(x.tipo))
+      ? bitacora.filter(x => ['estado', 'nueva-pelea', 'nuevo-jugador'].includes(x.tipo))
       : bitacora.filter(x => x.tipo === logFiltro);
 
   const items = lista.length
     ? lista.map(e => {
-        const info = tipoLogInfo(e.tipo);
-        return `<div class="log-entry" style="--lc:${info.color}">
+      const info = tipoLogInfo(e.tipo);
+      const labelRol = e.rol === 'admin' ? 'Administrador' : e.rol === 'empleado' ? 'Empleado' : 'Sistema';
+      return `<div class="log-entry" style="--lc:${info.color}">
           <div class="log-indicator" style="background:${info.color}22;color:${info.color};">${info.icon}</div>
           <div class="log-body">
             <div class="log-tag" style="color:${info.color};">${info.label}</div>
             <div class="log-msg">${e.msg}</div>
             <div class="log-meta">
-              <span class="log-actor">${e.user}</span>
+              <span class="log-actor" style="font-weight:600; color:var(--text);">${e.user} <span style="font-size:9px; color:var(--text3); font-weight:normal; opacity:0.75;">(${labelRol})</span></span>
               <span class="log-dot">·</span>
-              <span class="log-time">${fmtTimeRel(e.ts)}</span>
+              <span class="log-time" style="color:var(--gold);">${e.fecha} · ${e.hora}</span>
             </div>
           </div>
         </div>`;
-      }).join('')
+    }).join('')
     : '<div class="log-empty">No hay auditoría que mostrar.</div>';
 
   el.innerHTML = `
@@ -955,19 +1209,19 @@ function renderBitacora() {
       <div class="log-hdr-s">${today()} · ${counts.todos} eventos</div>
     </div>
     <div class="log-filters">
-      <button class="log-fb${logFiltro==='todos'?' active':''}" onclick="setLogF('todos')">
+      <button class="log-fb${logFiltro === 'todos' ? ' active' : ''}" onclick="setLogF('todos')">
         ${UI_ICONS.info}todas
       </button>
-      <button class="log-fb${logFiltro==='apuesta'?' active':''}" onclick="setLogF('apuesta')">
+      <button class="log-fb${logFiltro === 'apuesta' ? ' active' : ''}" onclick="setLogF('apuesta')">
         ${UI_ICONS.apuesta}apuestas
       </button>
-      <button class="log-fb${logFiltro==='resultado'?' active':''}" onclick="setLogF('resultado')">
+      <button class="log-fb${logFiltro === 'resultado' ? ' active' : ''}" onclick="setLogF('resultado')">
         ${UI_ICONS.resultado}resultados
       </button>
-      <button class="log-fb${logFiltro==='eliminar'?' active':''}" onclick="setLogF('eliminar')">
+      <button class="log-fb${logFiltro === 'eliminar' ? ' active' : ''}" onclick="setLogF('eliminar')">
         ${UI_ICONS.eliminar}eliminadas
       </button>
-      <button class="log-fb${logFiltro==='estado'?' active':''}" onclick="setLogF('estado')">
+      <button class="log-fb${logFiltro === 'estado' ? ' active' : ''}" onclick="setLogF('estado')">
         ${UI_ICONS.estado}estados
       </button>
     </div>
@@ -1011,7 +1265,7 @@ function buildPDF(j, tipo) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...mid);
-  doc.text('BRUNO\'S · CONTROL DE APUESTAS', W / 2, y, { align: 'center' });
+  doc.text('BY PINITOS · CONTROL DE APUESTAS', W / 2, y, { align: 'center' });
   y += 5;
   doc.setFontSize(8);
   doc.setTextColor(...light);
@@ -1178,7 +1432,7 @@ function buildPDF(j, tipo) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...light);
-  doc.text('Gallo Gold · Bruno\'s', mg, y);
+  doc.text('Gallo Gold · By Pinitos', mg, y);
   doc.text(`Reporte generado el ${today()}`, W - mg, y, { align: 'right' });
   y += 3.5;
   doc.setTextColor(190, 188, 184);
@@ -1191,14 +1445,14 @@ function exportPDF(jId, tipo) {
   const j = jugadores.find(x => x.id === jId);
   if (!j) return;
   if (!j.apuestas.length) { toast(`Sin apuestas: <strong>${j.nombre}</strong>`, 'error'); return; }
-  buildPDF(j, tipo).save(`ficha_${j.nombre.replace(/ /g,'_')}_${tipo}_${todayShort()}.pdf`);
+  buildPDF(j, tipo).save(`ficha_${j.nombre.replace(/ /g, '_')}_${tipo}_${todayShort()}.pdf`);
   toast(`${I.dl} PDF de <strong>${j.nombre}</strong> descargado`, 'success');
 }
 
 function exportPDF_bulk(tipo) {
   const lista = jugadores.filter(j => j.apuestas.length > 0);
   if (!lista.length) { toast('Sin jugadores con apuestas', 'error'); return; }
-  lista.forEach(j => buildPDF(j, tipo).save(`ficha_${j.nombre.replace(/ /g,'_')}_${tipo}_${todayShort()}.pdf`));
+  lista.forEach(j => buildPDF(j, tipo).save(`ficha_${j.nombre.replace(/ /g, '_')}_${tipo}_${todayShort()}.pdf`));
   toast(`${I.dl} <strong>${lista.length} PDFs descargados</strong> — ${tipo}`, 'success');
 }
 
@@ -1224,50 +1478,14 @@ function renderConfig() {
       </div>
 
       <div class="config-card">
-        <div class="config-title">Comisiones y Créditos</div>
-        <p class="config-desc">Configura los parámetros financieros clave que se aplican a los cálculos y validaciones de apuestas en tiempo real.</p>
+        <div class="config-title">Comisiones de la Casa</div>
+        <p class="config-desc">Configura los parámetros financieros clave que se aplican a los cálculos de ganancias de apuestas en tiempo real.</p>
         
         <div class="config-group">
           <label class="config-label">Comisión de la Casa (%)</label>
           <div class="config-input-wrapper">
             <span class="config-input-prefix">%</span>
             <input type="number" id="cfg-comision" class="config-input" min="0" max="100" value="${appConfig.comision_porcentaje}">
-          </div>
-        </div>
-
-        <div class="config-group">
-          <label class="config-label">Límite de Crédito General ($)</label>
-          <div class="config-input-wrapper">
-            <span class="config-input-prefix">$</span>
-            <input type="number" id="cfg-limite" class="config-input" min="0" value="${appConfig.limite_credito}">
-          </div>
-        </div>
-
-        <div class="config-group">
-          <label class="config-label">PIN de Autorización del Supervisor</label>
-          <div class="config-input-wrapper" style="position: relative;">
-            <span class="config-input-prefix">🔑</span>
-            <input type="password" id="cfg-pin" class="config-input" maxlength="4" pattern="\\d*" inputmode="numeric" value="${appConfig.pin_autorizacion}" style="padding-right: 42px;">
-            <button class="config-eye-btn eye-deco" type="button" aria-label="Mostrar PIN" onclick="togglePinVisibility()" style="
-              position: absolute;
-              right: 8px;
-              top: 50%;
-              transform: translateY(-50%);
-              border: none;
-              background: transparent;
-              color: rgba(255,255,255,0.4);
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 0;
-            ">
-              <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
-                <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle class="eye-pupil" cx="12" cy="12" r="3"/>
-                <line class="eye-slash" x1="4" y1="4" x2="20" y2="20"/>
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -1287,63 +1505,23 @@ function renderConfig() {
 
 async function saveConfig() {
   const comision = parseFloat(document.getElementById('cfg-comision').value);
-  const limite = parseFloat(document.getElementById('cfg-limite').value);
-  const pin = document.getElementById('cfg-pin').value.trim();
 
   if (isNaN(comision) || comision < 0 || comision > 100) {
     toast('Comisión inválida. Debe ser entre 0 y 100.', 'error');
     return;
   }
-  if (isNaN(limite) || limite < 0) {
-    toast('Límite de crédito inválido.', 'error');
-    return;
-  }
-  const pinRegex = /^\d{4}$/;
-  if (!pin) {
-    toast('El PIN no puede estar vacío.', 'error');
-    return;
-  }
-  if (!pinRegex.test(pin)) {
-    toast('El PIN debe ser de exactamente 4 dígitos numéricos.', 'error');
-    return;
-  }
 
   // Update in Supabase
-  const rows = [
-    { clave: 'comision_porcentaje', valor: comision.toString() },
-    { clave: 'limite_credito', valor: limite.toString() },
-    { clave: 'pin_autorizacion', valor: pin }
-  ];
+  const row = { clave: 'comision_porcentaje', valor: comision.toString() };
 
-  let successCount = 0;
-  for (const row of rows) {
-    const { error } = await sb.from('configuraciones').upsert(row, { onConflict: 'clave' });
-    if (!error) successCount++;
-  }
+  const { error } = await sb.from('configuraciones').upsert(row, { onConflict: 'clave' });
 
-  if (successCount === rows.length) {
-    await logAction('config', `Configuración del sistema actualizada: Comisión ${comision}%, Límite $${limite}, PIN ${pin}`, '⚙️');
+  if (!error) {
+    await logAction('config', `Configuración del sistema actualizada: Comisión ${comision}%`, '⚙️');
     await refreshData();
     toast('Configuración guardada correctamente.', 'success');
   } else {
     toast('Ocurrió un error al guardar la configuración.', 'error');
-  }
-}
-
-function togglePinVisibility() {
-  const pinInp = document.getElementById('cfg-pin');
-  const eyeBtn = document.querySelector('.config-eye-btn');
-  if (!pinInp || !eyeBtn) return;
-  const hidden = pinInp.type === 'password';
-  pinInp.type = hidden ? 'text' : 'password';
-  eyeBtn.classList.toggle('showing', hidden);
-  eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar PIN' : 'Mostrar PIN');
-  const svg = eyeBtn.querySelector('.eye-svg');
-  if (svg) {
-    svg.classList.remove('eye-pulse-now');
-    void svg.offsetWidth;
-    svg.classList.add('eye-pulse-now');
-    setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
   }
 }
 
@@ -1395,4 +1573,4 @@ async function confirmCierreCaja() {
     console.error(err);
     toast(`⚠️ Falló el cierre: ${err.message}`, 'error');
   }
-}
+}

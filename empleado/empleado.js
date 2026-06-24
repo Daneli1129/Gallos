@@ -98,7 +98,7 @@ function setTab(tab) {
   if (tab === 'peleas') renderPeleas();
 }
 
-let peleaFilter = 'todas';
+let peleaFilter = 'espera';
 function setPeleaFilter(f) { peleaFilter = f; renderPeleas(); }
 
 let searchPeleaQuery = '';
@@ -248,12 +248,12 @@ function renderToolbar() {
   const peleaActiva = peleas.find(p => p.estado === 'activa');
   // Solo 3 tabs
   const filtros = [
-    { id: 'activa', label: 'En juego', count: activas },
     { id: 'espera', label: 'En espera', count: espera },
+    { id: 'activa', label: 'En juego', count: activas },
     { id: 'cerrada', label: 'Terminadas', count: cerradas },
   ];
-  // Si el filtro actual es 'todas', redirigir a 'activa'
-  if (peleaFilter === 'todas') peleaFilter = 'activa';
+  // Si el filtro actual es 'todas', redirigir a 'espera'
+  if (peleaFilter === 'todas') peleaFilter = 'espera';
 
   // Banner de pelea activa
   let bannerHtml = '';
@@ -334,6 +334,8 @@ function buildPB(p) {
   const verdes = p.apuestas.filter(a => a.bando === 'verde');
   const tR = rojos.reduce((s, a) => s + a.monto, 0);
   const tV = verdes.reduce((s, a) => s + a.monto, 0);
+  const tRCasado = rojos.reduce((s, a) => s + (a.montoCasado || 0), 0);
+  const tVCasado = verdes.reduce((s, a) => s + (a.montoCasado || 0), 0);
   const total = tR + tV;
   const pctR = total > 0 ? Math.round(tR / total * 100) : 50;
   const pctV = 100 - pctR;
@@ -354,7 +356,7 @@ function buildPB(p) {
       ${isEspera ? `<button class="pb-st-big st-espera" title="En espera">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
       </button>
-      <button class="pb-st-big${(!isActiva && hayActiva) ? ' locked-play' : ''}" onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'activa')" title="${hayActiva ? 'Espera a que termine la pelea activa' : 'Iniciar pelea'}">
+      <button class="pb-st-big btn-play-start${(!isActiva && hayActiva) ? ' locked-play' : ''}" onclick="event.stopPropagation();cambiarEstadoPelea(${p.num},'activa')" title="${hayActiva ? 'Espera a que termine la pelea activa' : 'Iniciar pelea'}">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
       </button>` : `<button class="pb-st-big st-activa" title="En juego">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
@@ -388,9 +390,6 @@ function buildPB(p) {
           <button class="pb-fin-opt for" onclick="event.stopPropagation();ganarPelea(${p.num},'rojo')">
             <span class="fopt-dot" style="background:var(--rojo2);"></span> Rojo
           </button>
-          <button class="pb-fin-opt foe" onclick="event.stopPropagation();ganarPelea(${p.num},'empate')">
-            <span class="fopt-dot" style="background:var(--gold);"></span> Empate
-          </button>
           <button class="pb-fin-opt foa" onclick="event.stopPropagation();ganarPelea(${p.num},'anulada')">
             <span class="fopt-dot" style="background:var(--text3);"></span> Anular
           </button>
@@ -420,10 +419,34 @@ function buildPB(p) {
     ? lista.map(a => {
       const cls = a.resultado === 'ganada' ? ' gr' : a.resultado === 'perdida' ? ' pr' : '';
       const mc = a.resultado === 'ganada' ? ' g' : a.resultado === 'perdida' ? ' p' : '';
-      return `<div class="ap-row${cls}">
-          <span class="ap-name">${sanitize(a.nombre)}</span>
+      
+      if (a.estado === 'casado' || isCerrada) {
+        return `<div class="ap-row${cls}">
+            <span class="ap-name">${sanitize(a.nombre)}</span>
+            <span class="ap-monto${mc}">${fmt(a.monto)}</span>
+            ${!isCerrada ? `
+              <div class="ap-row-actions">
+                <button class="ap-del" onclick="elimDePelea(${p.num},'${a.id}')">${I.x}</button>
+              </div>
+            ` : ''}
+          </div>`;
+      }
+      
+      return `<div class="ap-row${cls} parcial">
+          <div class="ap-info-split">
+            <span class="ap-name">${sanitize(a.nombre)}</span>
+            <div class="ap-badges">
+              ${a.montoCasado > 0 ? `<span class="badge-matched">${fmt(a.montoCasado)} Casado</span>` : ''}
+              ${a.montoPendiente > 0 ? `<span class="badge-unmatched">${fmt(a.montoPendiente)} En Cola</span>` : ''}
+            </div>
+          </div>
           <span class="ap-monto${mc}">${fmt(a.monto)}</span>
-          ${!isCerrada ? `<button class="ap-del" onclick="elimDePelea(${p.num},'${a.id}')">${I.x}</button>` : ''}
+          ${!isCerrada ? `
+            <div class="ap-row-actions">
+              ${(isEspera && a.montoCasado === 0) ? `<button class="ap-swap" onclick="cambiarBandoApuesta(${p.num},'${a.id}','${a.bando}')" title="Cambiar de lado/color">${I.swap}</button>` : ''}
+              <button class="ap-del" onclick="elimDePelea(${p.num},'${a.id}')">${I.x}</button>
+            </div>
+          ` : ''}
         </div>`;
     }).join('')
     : '<div class="ap-empty">Sin apuestas</div>';
@@ -487,12 +510,12 @@ function buildPB(p) {
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Rojo</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tV * (1 - appConfig.comision_porcentaje / 100))}</span>
+          <span class="pb-rep-val" style="color:var(--rojo2);">${fmt(tVCasado * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
         <div class="pb-rep-cell">
           <span class="pb-rep-lbl">Pago Verde</span>
           <span class="pb-rep-arrow">→</span>
-          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tR * (1 - appConfig.comision_porcentaje / 100))}</span>
+          <span class="pb-rep-val" style="color:var(--green2);">${fmt(tRCasado * (1 - appConfig.comision_porcentaje / 100))}</span>
         </div>
       </div>`}`;
   return div;
@@ -510,6 +533,41 @@ function toggleFinalizarPanel(pNum) {
     const btn = panel.closest('.pb')?.querySelector('.pb-fin-btn');
     if (btn) btn.classList.add('active');
   }
+}
+
+async function cambiarBandoApuesta(pN, apId, bandoActual) {
+  const nuevoBando = bandoActual === 'rojo' ? 'verde' : 'rojo';
+  const labelBando = nuevoBando === 'rojo' ? 'Rojo' : 'Verde';
+  
+  const ok = await showConfirm(`¿Cambiar esta apuesta al bando <strong>${labelBando}</strong>?`, '↺');
+  if (!ok) return;
+
+  const p = getPelea(pN);
+  const ap = p.apuestas.find(a => a.id === apId);
+  if (!ap) return;
+
+  const { error: delErr } = await sb.from('apuestas').delete().eq('id', apId);
+  if (delErr) {
+    toast(`⚠️ Error al mover apuesta: ${delErr.message}`, 'error');
+    return;
+  }
+
+  const { error: insErr } = await sb.rpc('registrar_apuesta_p2p', {
+    p_pelea_num: pN,
+    p_jugador_id: ap.jugadorId,
+    p_bando: nuevoBando,
+    p_monto: ap.monto,
+    p_autorizado_por: null
+  });
+
+  if (insErr) {
+    toast(`⚠️ Error al registrar apuesta en el nuevo bando: ${insErr.message}`, 'error');
+    return;
+  }
+
+  await logAction('apuesta', `<strong>${ap.nombre}</strong> — Movió su apuesta de ${fmt(ap.monto)} al bando <strong>${labelBando}</strong> · Pelea #${pN}`, '↺');
+  await refreshData();
+  toast(`Apuesta movida al bando <strong>${labelBando}</strong>`, 'success');
 }
 
 async function elimDePelea(pN, apId) {
@@ -554,8 +612,13 @@ async function ganarPelea(pN, ganador) {
       .update({ estado: 'cerrada', ganador: ganador })
       .eq('id', peleaDb.id);
 
-    if (ganador === 'empate' || ganador === 'anulada') {
-      // Devolver apuestas
+    if (ganador === 'anulada') {
+      // Cuando la pelea se anula, se eliminan todas sus apuestas de la base de datos por completo
+      await sb
+        .from('apuestas')
+        .delete()
+        .eq('pelea_id', peleaDb.id);
+    } else if (ganador === 'empate') {
       await sb
         .from('apuestas')
         .update({ resultado: 'devuelta' })
@@ -603,9 +666,17 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
       toast(`Ya hay una pelea activa (#${otraActiva.num}). Ciérrala primero para activar esta.`, 'error');
       return;
     }
-    // ── REGLA: debe tener al menos una apuesta ──
-    if (!p.apuestas || p.apuestas.length === 0) {
-      toast(`No se puede iniciar Pelea #${pN}. Registra al menos una apuesta primero.`, 'error');
+    // ── REGLA: Debe haber al menos una apuesta en cada bando y estar parejas ──
+    const rojos = p.apuestas.filter(a => a.bando === 'rojo');
+    const verdes = p.apuestas.filter(a => a.bando === 'verde');
+    const tRCasado = rojos.reduce((s, a) => s + (a.montoCasado || 0), 0);
+
+    if (rojos.length === 0 || verdes.length === 0) {
+      toast(`No se puede iniciar Pelea #${pN}. Debe haber al menos una apuesta en cada bando.`, 'error');
+      return;
+    }
+    if (tRCasado === 0) {
+      toast(`No se puede iniciar Pelea #${pN}. Las apuestas deben estar emparejadas (casadas).`, 'error');
       return;
     }
   }
@@ -625,9 +696,17 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
       return;
     }
 
-    const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', pN).single();
-    if (peleaDb) {
-      await sb.from('peleas').update({ estado: nuevoEstado }).eq('id', peleaDb.id);
+    if (nuevoEstado === 'activa') {
+      const { error: actErr } = await sb.rpc('activar_pelea_y_limpiar_remanentes', { p_pelea_num: pN });
+      if (actErr) {
+        toast(`⚠️ Error al iniciar pelea: ${actErr.message}`, 'error');
+        return;
+      }
+    } else {
+      const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', pN).single();
+      if (peleaDb) {
+        await sb.from('peleas').update({ estado: nuevoEstado }).eq('id', peleaDb.id);
+      }
     }
   }
 
@@ -637,7 +716,11 @@ async function cambiarEstadoPelea(pN, nuevoEstado) {
   if (pN === peleaActual) estadoPelea = nuevoEstado;
 
   await refreshData();
-  toast(`<strong>P#${pN}</strong> ${labels[nuevoEstado]}`, 'success');
+  if (nuevoEstado === 'activa') {
+    toast(`<strong>Pelea #${pN} en juego</strong><br>Ya no se aceptan más apuestas`, 'error');
+  } else {
+    toast(`<strong>P#${pN}</strong> ${labels[nuevoEstado]}`, 'success');
+  }
 }
 
 async function confirmEliminarPelea(pN) {
@@ -868,68 +951,12 @@ function renderModalStep() {
 
   // ── PASO 4: Confirmar ────────────────────────────────────
   else if (m.step === 4) {
-    const j = jugadores.find(x => x.id === m.jugadorId);
-    const saldoMonto = j ? calcFicha(j).saldo : 0;
-    const nextSaldo = saldoMonto - m.monto;
-    const isOverLimit = nextSaldo < -appConfig.limite_credito;
-    const isSaldoNeg = !isOverLimit && (saldoMonto < 0);
-
     let alertH = '';
     if (m.esNuevo) {
       alertH = `<div class="modal-alert new">
            <span class="modal-alert-ico">✨</span>
            <div class="modal-alert-txt"><strong>Persona nueva</strong> — Se registrará en el sistema automáticamente.</div>
          </div>`;
-    } else if (isOverLimit) {
-      alertH = `<div class="modal-alert warn" style="background:rgba(231,76,60,.16); border-color:rgba(231,76,60,.4);">
-           <span class="modal-alert-ico" style="color:var(--rojo2);">⚠️</span>
-           <div class="modal-alert-txt" style="color:var(--text);">
-             <strong>¡LÍMITE DE CRÉDITO EXCEDIDO!</strong><br>
-             El saldo actual de <strong>${m.nombre}</strong> es <strong>${fmt(saldoMonto)}</strong>. 
-             Esta apuesta excede el límite permitido de <strong>${fmt(appConfig.limite_credito)}</strong> (quedaría en ${fmt(nextSaldo)}).<br>
-             Se requiere el PIN del supervisor para autorizar.
-           </div>
-         </div>`;
-    } else if (isSaldoNeg) {
-      alertH = `<div class="modal-alert warn">
-              <span class="modal-alert-ico">!</span>
-             <div class="modal-alert-txt">
-               <strong>${m.nombre}</strong> tiene saldo negativo de <strong>${fmt(Math.abs(saldoMonto))}</strong>.
-               Tu usuario quedará registrado como quien autorizó esta apuesta.
-             </div>
-           </div>`;
-    }
-
-    let pinInput = '';
-    if (isOverLimit) {
-      pinInput = `
-        <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 6px;">
-          <label style="font-size:9px; font-weight:700; text-transform:uppercase; color:var(--rojo2); font-family:'JetBrains Mono',monospace;">PIN de Autorización del Supervisor</label>
-          <div style="position: relative;">
-            <input type="password" id="modal-pin-auth" class="modal-otro-inp" style="border-color:rgba(231,76,60,.4); margin-top:0; padding:10px 42px 10px 10px; font-size:16px; width: 100%;" placeholder="" maxlength="4" pattern="\\d*" inputmode="numeric">
-            <button class="emp-modal-eye-btn eye-deco" type="button" aria-label="Mostrar PIN" onclick="toggleEmpModalPinVisibility()" style="
-              position: absolute;
-              right: 10px;
-              top: 50%;
-              transform: translateY(-50%);
-              border: none;
-              background: transparent;
-              color: rgba(255,255,255,0.4);
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              padding: 0;
-            ">
-              <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
-                <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle class="eye-pupil" cx="12" cy="12" r="3"/>
-                <line class="eye-slash" x1="4" y1="4" x2="20" y2="20"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      `;
     }
 
     body.innerHTML = `${alertH}
@@ -946,13 +973,12 @@ function renderModalStep() {
             ${fmt(m.monto)}
           </span>
         </div>
-      </div>
-      ${pinInput}`;
+      </div>`;
 
     foot.innerHTML = `
       <button class="mbtn ghost" onclick="goBack()">Editar</button>
-      <button class="${(isSaldoNeg || isOverLimit) ? 'mbtn danger' : 'mbtn primary'}" onclick="modalConfirm()">
-        ${(isSaldoNeg || isOverLimit) ? 'Confirmar' : 'Aceptar'}
+      <button class="mbtn primary" onclick="modalConfirm()">
+        Aceptar
       </button>`;
   }
 }
@@ -1107,8 +1133,9 @@ function otroChange(v) {
 async function modalConfirm() {
   const m = _modal;
   let jId = m.jugadorId;
+  let newPlayerObj = null;
 
-  // Si es nuevo, registrarlo en el sistema
+  // 1. Determinar si es un apostador nuevo y preparar el objeto de inserción si es necesario
   if (!jId) {
     const exist = jugadores.find(j => j.nombre.toLowerCase() === m.nombre.toLowerCase());
     if (exist) {
@@ -1117,44 +1144,20 @@ async function modalConfirm() {
       const nc = COLORS[jugadores.length % COLORS.length];
       const randSuff = Math.floor(Math.random() * 900) + 100;
       const nid = m.nombre.replace(/\s+/g, '').substring(0, 2).toUpperCase() + (jugadores.length + 1) + '-' + randSuff;
-
-      const { error } = await sb.from('jugadores').insert({
+      jId = nid;
+      newPlayerObj = {
         id: nid,
         nombre: m.nombre,
         color: nc,
         saldo_anterior: 0.00,
         registrado_por: currentUser ? currentUser.id : null
-      });
-      if (error) {
-        toast(`⚠️ Error al registrar jugador: ${error.message}`, 'error');
-        return;
-      }
-
-      jId = nid;
-      await logAction('nuevo-jugador', `Nuevo apostador registrado: <strong>${m.nombre}</strong>`, '+');
+      };
     }
   }
 
-  const j = jugadores.find(x => x.id === jId);
-  const prevSaldo = j ? calcFicha(j).saldo : 0;
-  const nextSaldo = prevSaldo - m.monto;
-  const isOverLimit = nextSaldo < -appConfig.limite_credito;
-  const isSaldoNeg = !isOverLimit && (prevSaldo < 0);
+  // 2. CORRER VALIDACIONES ANTES DE CUALQUIER ESCRITURA EN DB
 
-  // Validar PIN de supervisor si excede límite de crédito
-  if (isOverLimit) {
-    const pinVal = document.getElementById('modal-pin-auth')?.value;
-    if (!pinVal) {
-      toast('PIN de supervisor requerido para exceder el límite de crédito.', 'error');
-      return;
-    }
-    if (pinVal !== appConfig.pin_autorizacion) {
-      toast('PIN de supervisor incorrecto.', 'error');
-      return;
-    }
-  }
-
-  // ── VALIDACIÓN: BANDO ÚNICO Y ACUMULACIÓN ──
+  // Bando Único
   const p = getPelea(m.peleaNum);
   const existingOtherBando = p.apuestas.find(a => a.jugadorId === jId && a.bando !== m.bando);
   if (existingOtherBando) {
@@ -1162,56 +1165,27 @@ async function modalConfirm() {
     return;
   }
 
-  const existingSameBando = p.apuestas.find(a => a.jugadorId === jId && a.bando === m.bando);
-  if (existingSameBando) {
-    const nuevoMonto = existingSameBando.monto + m.monto;
-    const { error } = await sb
-      .from('apuestas')
-      .update({
-        monto: nuevoMonto,
-        autorizado_por: (isSaldoNeg || isOverLimit) && currentUser ? currentUser.id : null
-      })
-      .eq('id', existingSameBando.id);
+  // 3. EJECUTAR ESCRITURAS EN DB (VALIDACIONES PASARON)
 
-    if (error) {
-      toast(`⚠️ Error al actualizar apuesta: ${error.message}`, 'error');
+  // A. Insertar jugador si es nuevo
+  if (newPlayerObj) {
+    const { error: playErr } = await sb.from('jugadores').insert(newPlayerObj);
+    if (playErr) {
+      toast(`⚠️ Error al registrar jugador: ${playErr.message}`, 'error');
       return;
     }
-
-    if (isOverLimit) {
-      await logAction('saldo-negativo',
-        `⚠️ ¡LÍMITE EXCEDIDO! Apuesta incrementada de ${fmt(m.monto)} (nuevo total: ${fmt(nuevoMonto)}) excede el límite de crédito (${fmt(appConfig.limite_credito)}) — <strong>${j ? j.nombre : m.nombre}</strong> (Saldo: ${fmt(prevSaldo)}) · Autorizado por PIN de Supervisor · ${nowStr()}`,
-        '!');
-    } else if (isSaldoNeg) {
-      await logAction('saldo-negativo',
-        `Apuesta incrementada autorizada con saldo negativo (${fmt(Math.abs(prevSaldo))}) — <strong>${j ? j.nombre : m.nombre}</strong> · Autorizado por <strong>${currentUser.nombre}</strong> · ${nowStr()}`,
-        '!');
-    }
-
-    await logAction('apuesta',
-      `<strong>${j ? j.nombre : m.nombre}</strong> — Aumentó apuesta a ${fmt(nuevoMonto)} (+${fmt(m.monto)}) ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · Pelea #${m.peleaNum}`,
-      '$');
-
-    closeModal();
-    await refreshData();
-    toast(`<strong>${j ? j.nombre : m.nombre}</strong> — Apuesta actualizada a ${fmt(nuevoMonto)} ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · M${m.peleaNum}`, 'success');
-    return;
+    // Guardar el ID en el estado del modal para evitar re-inserciones en re-intentos
+    _modal.jugadorId = jId;
+    await logAction('nuevo-jugador', `Nuevo apostador registrado: <strong>${m.nombre}</strong>`, '+');
   }
 
-  // Crear apuesta nueva (si no tiene apuestas en esta pelea)
-  const { data: peleaDb } = await sb.from('peleas').select('id').eq('numero_pelea', m.peleaNum).single();
-  if (!peleaDb) {
-    toast(`Pelea #${m.peleaNum} no encontrada.`, 'error');
-    return;
-  }
-
-  const { error } = await sb.from('apuestas').insert({
-    pelea_id: peleaDb.id,
-    jugador_id: jId,
-    bando: m.bando,
-    monto: m.monto,
-    resultado: 'pendiente',
-    autorizado_por: (isSaldoNeg || isOverLimit) && currentUser ? currentUser.id : null
+  // B. Registrar la apuesta usando la función P2P
+  const { error } = await sb.rpc('registrar_apuesta_p2p', {
+    p_pelea_num: m.peleaNum,
+    p_jugador_id: jId,
+    p_bando: m.bando,
+    p_monto: m.monto,
+    p_autorizado_por: null
   });
 
   if (error) {
@@ -1219,24 +1193,13 @@ async function modalConfirm() {
     return;
   }
 
-  // Log saldo negativo u overlimit
-  if (isOverLimit) {
-    await logAction('saldo-negativo',
-      `⚠️ ¡LÍMITE EXCEDIDO! Apuesta de ${fmt(m.monto)} excede el límite de crédito (${fmt(appConfig.limite_credito)}) — <strong>${j ? j.nombre : m.nombre}</strong> (Saldo: ${fmt(prevSaldo)}) · Autorizado por PIN de Supervisor · ${nowStr()}`,
-      '!');
-  } else if (isSaldoNeg) {
-    await logAction('saldo-negativo',
-      `Apuesta autorizada con saldo negativo (${fmt(Math.abs(prevSaldo))}) — <strong>${j ? j.nombre : m.nombre}</strong> · Autorizado por <strong>${currentUser.nombre}</strong> · ${nowStr()}`,
-      '!');
-  }
-
   await logAction('apuesta',
-    `<strong>${j ? j.nombre : m.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · Pelea #${m.peleaNum}`,
+    `<strong>${m.nombre}</strong> — Apuesta de ${fmt(m.monto)} a ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · Pelea #${m.peleaNum}`,
     '$');
 
   closeModal();
   await refreshData();
-  toast(`<strong>${j ? j.nombre : m.nombre}</strong> — ${fmt(m.monto)} ${m.bando === 'verde' ? 'Verde' : 'Rojo'} · M${m.peleaNum}`, 'success');
+  toast(`Apuesta guardada para <strong>${m.nombre}</strong>`, 'success');
 }
 
 // ── KEYBOARD SHORTCUTS ────────────────────────────────────
@@ -1244,29 +1207,3 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (e.key.toLowerCase() === 'n') { nuevaPelea(); e.preventDefault(); }
 });
-
-function toggleEmpModalPinVisibility() {
-  const pinInp = document.getElementById('modal-pin-auth');
-  const eyeBtn = document.querySelector('.emp-modal-eye-btn');
-  if (!pinInp || !eyeBtn) return;
-  const hidden = pinInp.type === 'password';
-  pinInp.type = hidden ? 'text' : 'password';
-  eyeBtn.classList.toggle('showing', hidden);
-  eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar PIN' : 'Mostrar PIN');
-  const svg = eyeBtn.querySelector('.eye-svg');
-  if (svg) {
-    svg.classList.remove('eye-pulse-now');
-    void svg.offsetWidth;
-    svg.classList.add('eye-pulse-now');
-    setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
-  }
-}
-
-
-
-
-
-
-
-
-

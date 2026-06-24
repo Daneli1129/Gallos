@@ -1,409 +1,659 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Gallo Gold — Bruno's</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/shared.css">
-<script src="shared/supabase.umd.js"></script>
-<script src="shared/shared.js?v=2"></script>
-<style>
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
-
-  /* ── ESFERAS FLOTANTES DE FONDO ── */
-  #login-screen .l-orbe {
-    display: none;
-  }
-  #login-screen .l-orbe:nth-child(1) {
-    width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(201,168,76,.10), transparent 70%);
-    top: -12%; left: -14%;
-    animation: orbe1 22s ease-in-out infinite;
-  }
-  #login-screen .l-orbe:nth-child(2) {
-    width: 340px; height: 340px;
-    background: radial-gradient(circle, rgba(212,56,13,.05), transparent 70%);
-    bottom: -15%; right: -10%;
-    animation: orbe2 18s ease-in-out infinite;
-  }
-  #login-screen .l-orbe:nth-child(3) {
-    width: 260px; height: 260px;
-    background: radial-gradient(circle, rgba(201,168,76,.035), transparent 70%);
-    bottom: 15%; left: 5%;
-    animation: orbe3 25s ease-in-out infinite;
-  }
-  @keyframes orbe1 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(50px, -60px) scale(1.08); }
-    50% { transform: translate(-30px, 30px) scale(.94); }
-    75% { transform: translate(40px, 40px) scale(1.04); }
-  }
-  @keyframes orbe2 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(-40px, -30px) scale(1.06); }
-    66% { transform: translate(30px, 20px) scale(.95); }
-  }
-  @keyframes orbe3 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    20% { transform: translate(20px, -40px) scale(1.05); }
-    40% { transform: translate(-30px, -10px) scale(.97); }
-    60% { transform: translate(10px, 30px) scale(1.03); }
-    80% { transform: translate(-20px, 10px) scale(.95); }
-  }
-
-  /* ── PARTÍCULAS / BRASAS ── */
-  .l-particula {
-    position: absolute;
-    border-radius: 50%;
-    pointer-events: none;
-    mix-blend-mode: screen;
-  }
-
-  /* ── ANIMACIÓN DE ENTRADA ESCALONADA ── */
-  .lw > * {
-    opacity: 0;
-    animation: escalonada 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-  .lw > *:nth-child(1) { animation-delay: 0.0s; }
-  .lw > *:nth-child(2) { animation-delay: 0.15s; }
-  .lw > *:nth-child(3) { animation-delay: 0.30s; }
-  @keyframes escalonada {
-    from { opacity: 0; transform: translateY(24px) scale(.97); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* ── GALLO EMBLEMA — FLOTAR + LATIDO ── */
-  .l-rooster {
-    animation: flotar 5s ease-in-out infinite, latidoEmblema 4s ease-in-out infinite;
-  }
-  @keyframes flotar {
-    0%, 100% { transform: translateY(0); }
-    25% { transform: translateY(-4px); }
-    50% { transform: translateY(-7px); }
-    75% { transform: translateY(-3px); }
-  }
-  @keyframes latidoEmblema {
-    0%, 100% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
-    46% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
-    48% { filter: drop-shadow(0 0 50px rgba(201,168,76,.55)) brightness(1.08); }
-    50% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
-    52% { filter: drop-shadow(0 0 45px rgba(201,168,76,.45)) brightness(1.05); }
-    54% { filter: drop-shadow(0 0 30px rgba(201,168,76,.30)); }
-  }
-  .rooster-eye {
-    transform-origin: 18px 28px;
-    animation: parpadear 4s ease-in-out infinite;
-  }
-  @keyframes parpadear {
-    0%, 94%, 100% { transform: scaleY(1); }
-    96% { transform: scaleY(0.1); }
-  }
-  .rooster-body {
-    transform-origin: 30px 30px;
-    animation: respirar 6s ease-in-out infinite;
-  }
-  @keyframes respirar {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.012); }
-  }
-
-  /* ── BRILLO DE BORDE DEL CARD ── */
-  .l-card::before {
-    animation: brilloBorde 3s ease-in-out infinite;
-  }
-  @keyframes brilloBorde {
-    0%, 100% { opacity: .6; }
-    50% { opacity: 1; }
-  }
-
-  /* ── SHAKE DEL ERROR ── */
-  .l-err.show {
-    animation: agitar .4s cubic-bezier(.36,.07,.19,.97), fadeOut .35s ease 2.8s forwards;
-  }
-  @keyframes agitar {
-    10%, 90% { transform: translateX(-1px); }
-    20%, 80% { transform: translateX(2px); }
-    30%, 50%, 70% { transform: translateX(-3px); }
-    40%, 60% { transform: translateX(3px); }
-  }
-  @keyframes fadeOut {
-    to { opacity: 0; }
-  }
-
-  /* ── INPUTS — BRILLO FOCUS ── */
-  .l-input:focus {
-    animation: respiro 2s ease-in-out infinite;
-  }
-  @keyframes respiro {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(201,168,76,.12), 0 0 24px rgba(201,168,76,.06); }
-    50% { box-shadow: 0 0 0 5px rgba(201,168,76,.18), 0 0 40px rgba(201,168,76,.10); }
-  }
-
-  /* ── OJO DECORATIVO — PARPADEO SUTIL ── */
-  .eye-deco {
-    opacity: .65;
-    transition: opacity .3s;
-  }
-  .eye-deco:hover { opacity: .85; }
-  .eye-deco.showing { opacity: 1; }
-  .eye-svg {
-    display: block;
-    width: 22px; height: 22px;
-    transition: opacity .3s, transform .3s;
-  }
-  .eye-svg {
-    animation: latido 5s ease-in-out infinite;
-  }
-  .eye-svg.eye-pulse-now {
-    animation: parpadeoOjo .5s ease-out;
-  }
-  .eye-pupil {
-    transform-origin: center;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .eye-deco.showing .eye-pupil {
-    transform: scale(0.6);
-  }
-  .eye-slash {
-    stroke-dasharray: 23;
-    stroke-dashoffset: 23;
-    transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .eye-deco.showing .eye-slash {
-    stroke-dashoffset: 0;
-  }
-  @keyframes latido {
-    0%, 100% { opacity: .5; }
-    92% { opacity: .5; }
-    94% { opacity: .35; transform: scaleY(.85); }
-    96% { opacity: .6; transform: scaleY(1); }
-    98% { opacity: .45; }
-  }
-  @keyframes parpadeoOjo {
-    0% { opacity: .5; transform: scale(1); }
-    20% { opacity: .9; transform: scale(1.08); }
-    40% { opacity: .3; transform: scaleY(.6); }
-    60% { opacity: .7; transform: scale(1.05); }
-    100% { opacity: .5; transform: scale(1); }
-  }
-
-  /* ── BOTÓN — LOADING ── */
-  .l-btn.cargando {
-    pointer-events: none;
-    position: relative;
-    color: transparent;
-  }
-  .l-btn.cargando::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .l-btn .l-spinner {
-    display: none;
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 20px; height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid rgba(10,8,6,.2);
-    border-top-color: #0a0806;
-    border-radius: 50%;
-    animation: girar .6s linear infinite;
-  }
-  .l-btn.cargando .l-spinner {
-    display: block;
-  }
-  @keyframes girar {
-    to { transform: rotate(360deg); }
-  }
-
-  /* ── RIPPLE + FLASH DEL BOTÓN ── */
-  .l-btn .ripple-container {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    border-radius: inherit;
-    pointer-events: none;
-  }
-  .l-btn .ripple {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(10,8,6,.18);
-    transform: scale(0);
-    animation: rippleAnim .55s ease-out forwards;
-    pointer-events: none;
-  }
-  @keyframes rippleAnim {
-    to { transform: scale(3); opacity: 0; }
-  }
-  .l-btn .btn-flash {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(circle at var(--fx, center), rgba(255,255,255,.35), transparent 60%);
-    opacity: 0;
-    pointer-events: none;
-    animation: btnFlash .45s ease-out forwards;
-  }
-  @keyframes btnFlash {
-    0% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-
-  /* ── LÍNEA DORADA EN INPUT AL FOCUS ── */
-  .l-input-wrap::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 50%;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    border-radius: 2px;
-    transition: width .3s cubic-bezier(.22,1,.36,1), left .3s cubic-bezier(.22,1,.36,1);
-    pointer-events: none;
-  }
-  .l-input-wrap:focus-within::after {
-    width: 80%;
-    left: 10%;
-  }
-
-  /* ── RESPONSIVE ── */
-  @media (min-width: 768px) {
-    .lw {
-      max-width: 420px;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gallo Gold — By Pinitos</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="shared/shared.css">
+  <script src="shared/supabase.umd.js"></script>
+  <script src="shared/shared.js?v=2"></script>
+  <style>
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
     }
-    .l-card {
-      padding: 40px 36px 36px;
-      box-shadow: 0 22px 70px rgba(0,0,0,.78), 0 0 60px rgba(201,168,76,.08), inset 0 1px 0 rgba(255,255,255,.06);
+
+    /* ── ESFERAS FLOTANTES DE FONDO ── */
+    #login-screen .l-orbe {
+      display: none;
     }
-    .l-rooster {
-      width: 90px; height: 90px;
-    }
-    .l-brand {
-      font-size: 38px;
-    }
+
     #login-screen .l-orbe:nth-child(1) {
-      width: 500px; height: 500px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(201, 168, 76, .10), transparent 70%);
+      top: -12%;
+      left: -14%;
+      animation: orbe1 22s ease-in-out infinite;
     }
+
     #login-screen .l-orbe:nth-child(2) {
-      width: 420px; height: 420px;
+      width: 340px;
+      height: 340px;
+      background: radial-gradient(circle, rgba(212, 56, 13, .05), transparent 70%);
+      bottom: -15%;
+      right: -10%;
+      animation: orbe2 18s ease-in-out infinite;
     }
-  }
-</style>
+
+    #login-screen .l-orbe:nth-child(3) {
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(201, 168, 76, .035), transparent 70%);
+      bottom: 15%;
+      left: 5%;
+      animation: orbe3 25s ease-in-out infinite;
+    }
+
+    @keyframes orbe1 {
+
+      0%,
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      25% {
+        transform: translate(50px, -60px) scale(1.08);
+      }
+
+      50% {
+        transform: translate(-30px, 30px) scale(.94);
+      }
+
+      75% {
+        transform: translate(40px, 40px) scale(1.04);
+      }
+    }
+
+    @keyframes orbe2 {
+
+      0%,
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      33% {
+        transform: translate(-40px, -30px) scale(1.06);
+      }
+
+      66% {
+        transform: translate(30px, 20px) scale(.95);
+      }
+    }
+
+    @keyframes orbe3 {
+
+      0%,
+      100% {
+        transform: translate(0, 0) scale(1);
+      }
+
+      20% {
+        transform: translate(20px, -40px) scale(1.05);
+      }
+
+      40% {
+        transform: translate(-30px, -10px) scale(.97);
+      }
+
+      60% {
+        transform: translate(10px, 30px) scale(1.03);
+      }
+
+      80% {
+        transform: translate(-20px, 10px) scale(.95);
+      }
+    }
+
+    /* ── PARTÍCULAS / BRASAS ── */
+    .l-particula {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    /* ── ANIMACIÓN DE ENTRADA ESCALONADA ── */
+    .lw>* {
+      opacity: 0;
+      animation: escalonada 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .lw>*:nth-child(1) {
+      animation-delay: 0.0s;
+    }
+
+    .lw>*:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .lw>*:nth-child(3) {
+      animation-delay: 0.30s;
+    }
+
+    @keyframes escalonada {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* ── GALLO EMBLEMA — FLOTAR + LATIDO ── */
+    .l-rooster {
+      animation: flotar 5s ease-in-out infinite, latidoEmblema 4s ease-in-out infinite;
+    }
+
+    @keyframes flotar {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      25% {
+        transform: translateY(-4px);
+      }
+
+      50% {
+        transform: translateY(-7px);
+      }
+
+      75% {
+        transform: translateY(-3px);
+      }
+    }
+
+    @keyframes latidoEmblema {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 30px rgba(201, 168, 76, .30));
+      }
+
+      46% {
+        filter: drop-shadow(0 0 30px rgba(201, 168, 76, .30));
+      }
+
+      48% {
+        filter: drop-shadow(0 0 50px rgba(201, 168, 76, .55)) brightness(1.08);
+      }
+
+      50% {
+        filter: drop-shadow(0 0 30px rgba(201, 168, 76, .30));
+      }
+
+      52% {
+        filter: drop-shadow(0 0 45px rgba(201, 168, 76, .45)) brightness(1.05);
+      }
+
+      54% {
+        filter: drop-shadow(0 0 30px rgba(201, 168, 76, .30));
+      }
+    }
+
+    .rooster-eye {
+      transform-origin: 18px 28px;
+      animation: parpadear 4s ease-in-out infinite;
+    }
+
+    @keyframes parpadear {
+
+      0%,
+      94%,
+      100% {
+        transform: scaleY(1);
+      }
+
+      96% {
+        transform: scaleY(0.1);
+      }
+    }
+
+    .rooster-body {
+      transform-origin: 30px 30px;
+      animation: respirar 6s ease-in-out infinite;
+    }
+
+    @keyframes respirar {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.012);
+      }
+    }
+
+    /* ── BRILLO DE BORDE DEL CARD ── */
+    .l-card::before {
+      animation: brilloBorde 3s ease-in-out infinite;
+    }
+
+    @keyframes brilloBorde {
+
+      0%,
+      100% {
+        opacity: .6;
+      }
+
+      50% {
+        opacity: 1;
+      }
+    }
+
+    /* ── SHAKE DEL ERROR ── */
+    .l-err.show {
+      animation: agitar .4s cubic-bezier(.36, .07, .19, .97), fadeOut .35s ease 2.8s forwards;
+    }
+
+    @keyframes agitar {
+
+      10%,
+      90% {
+        transform: translateX(-1px);
+      }
+
+      20%,
+      80% {
+        transform: translateX(2px);
+      }
+
+      30%,
+      50%,
+      70% {
+        transform: translateX(-3px);
+      }
+
+      40%,
+      60% {
+        transform: translateX(3px);
+      }
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+      }
+    }
+
+    /* ── INPUTS — BRILLO FOCUS ── */
+    .l-input:focus {
+      animation: respiro 2s ease-in-out infinite;
+    }
+
+    @keyframes respiro {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 3px rgba(201, 168, 76, .12), 0 0 24px rgba(201, 168, 76, .06);
+      }
+
+      50% {
+        box-shadow: 0 0 0 5px rgba(201, 168, 76, .18), 0 0 40px rgba(201, 168, 76, .10);
+      }
+    }
+
+    /* ── OJO DECORATIVO — PARPADEO SUTIL ── */
+    .eye-deco {
+      opacity: .65;
+      transition: opacity .3s;
+    }
+
+    .eye-deco:hover {
+      opacity: .85;
+    }
+
+    .eye-deco.showing {
+      opacity: 1;
+    }
+
+    .eye-svg {
+      display: block;
+      width: 22px;
+      height: 22px;
+      transition: opacity .3s, transform .3s;
+    }
+
+    .eye-svg {
+      animation: latido 5s ease-in-out infinite;
+    }
+
+    .eye-svg.eye-pulse-now {
+      animation: parpadeoOjo .5s ease-out;
+    }
+
+    .eye-pupil {
+      transform-origin: center;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .eye-deco.showing .eye-pupil {
+      transform: scale(0.6);
+    }
+
+    .eye-slash {
+      stroke-dasharray: 23;
+      stroke-dashoffset: 23;
+      transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .eye-deco.showing .eye-slash {
+      stroke-dashoffset: 0;
+    }
+
+    @keyframes latido {
+
+      0%,
+      100% {
+        opacity: .5;
+      }
+
+      92% {
+        opacity: .5;
+      }
+
+      94% {
+        opacity: .35;
+        transform: scaleY(.85);
+      }
+
+      96% {
+        opacity: .6;
+        transform: scaleY(1);
+      }
+
+      98% {
+        opacity: .45;
+      }
+    }
+
+    @keyframes parpadeoOjo {
+      0% {
+        opacity: .5;
+        transform: scale(1);
+      }
+
+      20% {
+        opacity: .9;
+        transform: scale(1.08);
+      }
+
+      40% {
+        opacity: .3;
+        transform: scaleY(.6);
+      }
+
+      60% {
+        opacity: .7;
+        transform: scale(1.05);
+      }
+
+      100% {
+        opacity: .5;
+        transform: scale(1);
+      }
+    }
+
+    /* ── BOTÓN — LOADING ── */
+    .l-btn.cargando {
+      pointer-events: none;
+      position: relative;
+      color: transparent;
+    }
+
+    .l-btn.cargando::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .l-btn .l-spinner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid rgba(10, 8, 6, .2);
+      border-top-color: #0a0806;
+      border-radius: 50%;
+      animation: girar .6s linear infinite;
+    }
+
+    .l-btn.cargando .l-spinner {
+      display: block;
+    }
+
+    @keyframes girar {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── RIPPLE + FLASH DEL BOTÓN ── */
+    .l-btn .ripple-container {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .l-btn .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(10, 8, 6, .18);
+      transform: scale(0);
+      animation: rippleAnim .55s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes rippleAnim {
+      to {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+
+    .l-btn .btn-flash {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at var(--fx, center), rgba(255, 255, 255, .35), transparent 60%);
+      opacity: 0;
+      pointer-events: none;
+      animation: btnFlash .45s ease-out forwards;
+    }
+
+    @keyframes btnFlash {
+      0% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+
+    /* ── LÍNEA DORADA EN INPUT AL FOCUS ── */
+    .l-input-wrap::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      border-radius: 2px;
+      transition: width .3s cubic-bezier(.22, 1, .36, 1), left .3s cubic-bezier(.22, 1, .36, 1);
+      pointer-events: none;
+    }
+
+    .l-input-wrap:focus-within::after {
+      width: 80%;
+      left: 10%;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (min-width: 768px) {
+      .lw {
+        max-width: 420px;
+      }
+
+      .l-card {
+        padding: 40px 36px 36px;
+        box-shadow: 0 22px 70px rgba(0, 0, 0, .78), 0 0 60px rgba(201, 168, 76, .08), inset 0 1px 0 rgba(255, 255, 255, .06);
+      }
+
+      .l-rooster {
+        width: 90px;
+        height: 90px;
+      }
+
+      .l-brand {
+        font-size: 38px;
+      }
+
+      #login-screen .l-orbe:nth-child(1) {
+        width: 500px;
+        height: 500px;
+      }
+
+      #login-screen .l-orbe:nth-child(2) {
+        width: 420px;
+        height: 420px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<div id="login-screen">
-  <div class="l-orbe"></div>
-  <div class="l-orbe"></div>
-  <div class="l-orbe"></div>
+  <div id="login-screen">
+    <div class="l-orbe"></div>
+    <div class="l-orbe"></div>
+    <div class="l-orbe"></div>
 
-  <div class="lw">
+    <div class="lw">
 
-    <!-- Emblema -->
-    <div style="text-align:center;">
-      <div class="l-rooster">
-        <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="30" cy="30" r="28" stroke="currentColor" stroke-width="1.2" opacity=".15"/>
-          <path d="M12 32C8 44 18 52 30 50c8-1 16-6 20-14 4-8 2-16-4-20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".4"/>
-          <path class="rooster-body" d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 32L4 30l6 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle class="rooster-eye" cx="18" cy="28" r="1.8" fill="currentColor" opacity=".8"/>
-          <path d="M24 46c-2 6 2 10 6 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          <path d="M40 24c4-4 10-6 8-12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M42 26c6-2 10-6 8-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="l-brand">Gallo Gold</div>
-      <div class="l-sub">bruno's</div>
-    </div>
-
-    <div class="l-div"></div>
-
-    <!-- Card de inicio de sesión -->
-    <div class="l-card">
-      <span class="l-border-l"></span>
-      <span class="l-border-r"></span>
-      <div class="l-ember"></div>
-      <div class="l-emblem">Apuestas en vivo</div>
-
-      <div class="l-field">
-        <label class="l-label" for="li-u">Usuario</label>
-        <div class="l-input-wrap">
-          <input class="l-input" id="li-u" type="text" placeholder="Usuario" autocomplete="off">
+      <!-- Emblema -->
+      <div style="text-align:center;">
+        <div class="l-rooster">
+          <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="30" cy="30" r="28" stroke="currentColor" stroke-width="1.2" opacity=".15" />
+            <path d="M12 32C8 44 18 52 30 50c8-1 16-6 20-14 4-8 2-16-4-20" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" opacity=".4" />
+            <path class="rooster-body" d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4"
+              stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 32L4 30l6 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <circle class="rooster-eye" cx="18" cy="28" r="1.8" fill="currentColor" opacity=".8" />
+            <path d="M24 46c-2 6 2 10 6 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M40 24c4-4 10-6 8-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <path d="M42 26c6-2 10-6 8-10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
         </div>
+        <div class="l-brand">Gallo Gold</div>
+        <div class="l-sub">By Pinitos</div>
       </div>
 
-      <div class="l-field">
-        <label class="l-label" for="li-p">Contraseña</label>
-        <div class="l-input-wrap">
-          <input class="l-input" id="li-p" type="password" placeholder="••••••••" autocomplete="current-password">
-          <button class="l-input-icon eye-deco" type="button" aria-label="Mostrar contraseña">
-            <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle class="eye-pupil" cx="12" cy="12" r="3"/>
-              <line class="eye-slash" x1="4" y1="4" x2="20" y2="20"/>
-            </svg>
-          </button>
+      <div class="l-div"></div>
+
+      <!-- Card de inicio de sesión -->
+      <div class="l-card">
+        <span class="l-border-l"></span>
+        <span class="l-border-r"></span>
+        <div class="l-ember"></div>
+        <div class="l-emblem">Apuestas en vivo</div>
+
+        <div class="l-field">
+          <label class="l-label" for="li-u">Usuario</label>
+          <div class="l-input-wrap">
+            <input class="l-input" id="li-u" type="text" placeholder="Usuario" autocomplete="off">
+          </div>
         </div>
+
+        <div class="l-field">
+          <label class="l-label" for="li-p">Contraseña</label>
+          <div class="l-input-wrap">
+            <input class="l-input" id="li-p" type="password" placeholder="••••••••" autocomplete="current-password">
+            <button class="l-input-icon eye-deco" type="button" aria-label="Mostrar contraseña">
+              <svg class="eye-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path class="eye-lid" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle class="eye-pupil" cx="12" cy="12" r="3" />
+                <line class="eye-slash" x1="4" y1="4" x2="20" y2="20" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="l-err" id="l-err">Usuario o contraseña incorrectos.</div>
+
+        <button class="l-btn" id="l-btn" onclick="doLogin()">
+          Entrar
+          <span class="l-spinner"></span>
+          <span class="ripple-container"></span>
+        </button>
       </div>
 
-      <div class="l-err" id="l-err">Usuario o contraseña incorrectos.</div>
-
-      <button class="l-btn" id="l-btn" onclick="doLogin()">
-        Entrar
-        <span class="l-spinner"></span>
-        <span class="ripple-container"></span>
-      </button>
     </div>
-
   </div>
-</div>
 
-<script>
-const loginEls = {
-  user: document.getElementById('li-u'),
-  pass: document.getElementById('li-p'),
-  err: document.getElementById('l-err'),
-  btn: document.getElementById('l-btn')
-};
+  <script>
+    const loginEls = {
+      user: document.getElementById('li-u'),
+      pass: document.getElementById('li-p'),
+      err: document.getElementById('l-err'),
+      btn: document.getElementById('l-btn')
+    };
 
-// ── BRASAS / PARTÍCULAS ──
-(function crearParticulas() {
-  const screen = document.getElementById('login-screen');
-  const colores = [
-    'rgba(201,168,76,',  // oro
-    'rgba(212,56,13,',   // ascua
-    'rgba(232,201,122,', // oro claro
-    'rgba(255,255,255,', // blanco cálido
-  ];
-  for (let i = 0; i < 24; i++) {
-    const p = document.createElement('div');
-    p.className = 'l-particula';
-    const sz = Math.random() * 3 + 1;
-    const t = Math.random() * 160 + 80;
-    const dx = (Math.random() - 0.5) * 60;
-    p.style.cssText = `
-      left:${Math.random()*100}%; top:${Math.random()*100}%;
+    // ── BRASAS / PARTÍCULAS ──
+    (function crearParticulas() {
+      const screen = document.getElementById('login-screen');
+      const colores = [
+        'rgba(201,168,76,',  // oro
+        'rgba(212,56,13,',   // ascua
+        'rgba(232,201,122,', // oro claro
+        'rgba(255,255,255,', // blanco cálido
+      ];
+      for (let i = 0; i < 24; i++) {
+        const p = document.createElement('div');
+        p.className = 'l-particula';
+        const sz = Math.random() * 3 + 1;
+        const t = Math.random() * 160 + 80;
+        const dx = (Math.random() - 0.5) * 60;
+        p.style.cssText = `
+      left:${Math.random() * 100}%; top:${Math.random() * 100}%;
       width:${sz}px; height:${sz}px;
-      background:${colores[i%4]}${Math.random()*.10+.02});
-      box-shadow: 0 0 ${sz*2}px ${colores[i%4]}${Math.random()*.05+.01});
+      background:${colores[i % 4]}${Math.random() * .10 + .02});
+      box-shadow: 0 0 ${sz * 2}px ${colores[i % 4]}${Math.random() * .05 + .01});
       animation: brasa ${t}s linear infinite;
-      animation-delay: -${Math.random()*t}s;
+      animation-delay: -${Math.random() * t}s;
       opacity:0;
     `;
-    screen.appendChild(p);
-  }
-})();
+        screen.appendChild(p);
+      }
+    })();
 
-const estiloParticulas = document.createElement('style');
-estiloParticulas.textContent = `
+    const estiloParticulas = document.createElement('style');
+    estiloParticulas.textContent = `
   @keyframes brasa {
     0% { transform: translateY(0) translateX(0) scale(0); opacity: 0; }
     8% { opacity: 1; transform: translateY(-8vh) translateX(8px) scale(1); }
@@ -412,68 +662,69 @@ estiloParticulas.textContent = `
     100% { transform: translateY(-100vh) translateX(-20px) scale(0.3); opacity: 0; }
   }
 `;
-document.head.appendChild(estiloParticulas);
+    document.head.appendChild(estiloParticulas);
 
-// ── OJO ──
-const eyeBtn = document.querySelector('.eye-deco');
-if (eyeBtn) {
-  eyeBtn.addEventListener('click', () => {
-    const hidden = loginEls.pass.type === 'password';
-    loginEls.pass.type = hidden ? 'text' : 'password';
-    eyeBtn.classList.toggle('showing', hidden);
-    eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
-    const svg = eyeBtn.querySelector('.eye-svg');
-    svg.classList.remove('eye-pulse-now');
-    void svg.offsetWidth;
-    svg.classList.add('eye-pulse-now');
-    setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
-  });
-}
+    // ── OJO ──
+    const eyeBtn = document.querySelector('.eye-deco');
+    if (eyeBtn) {
+      eyeBtn.addEventListener('click', () => {
+        const hidden = loginEls.pass.type === 'password';
+        loginEls.pass.type = hidden ? 'text' : 'password';
+        eyeBtn.classList.toggle('showing', hidden);
+        eyeBtn.setAttribute('aria-label', hidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
+        const svg = eyeBtn.querySelector('.eye-svg');
+        svg.classList.remove('eye-pulse-now');
+        void svg.offsetWidth;
+        svg.classList.add('eye-pulse-now');
+        setTimeout(() => svg.classList.remove('eye-pulse-now'), 500);
+      });
+    }
 
-// ── RIPPLE + FLASH ──
-loginEls.btn.addEventListener('click', function(e) {
-  const btn = this;
-  const rect = btn.getBoundingClientRect();
+    // ── RIPPLE + FLASH ──
+    loginEls.btn.addEventListener('click', function (e) {
+      const btn = this;
+      const rect = btn.getBoundingClientRect();
 
-  // Ripple
-  const container = btn.querySelector('.ripple-container');
-  const ripple = document.createElement('span');
-  ripple.className = 'ripple';
-  const size = Math.max(rect.width, rect.height);
-  const x = (e.clientX || e.touches?.[0]?.clientX || rect.left + rect.width/2) - rect.left - size/2;
-  const y = (e.clientY || e.touches?.[0]?.clientY || rect.top + rect.height/2) - rect.top - size/2;
-  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
-  container.appendChild(ripple);
-  ripple.addEventListener('animationend', () => ripple.remove());
+      // Ripple
+      const container = btn.querySelector('.ripple-container');
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      const size = Math.max(rect.width, rect.height);
+      const x = (e.clientX || e.touches?.[0]?.clientX || rect.left + rect.width / 2) - rect.left - size / 2;
+      const y = (e.clientY || e.touches?.[0]?.clientY || rect.top + rect.height / 2) - rect.top - size / 2;
+      ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+      container.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove());
 
-  // Flash dorado
-  const flash = document.createElement('span');
-  flash.className = 'btn-flash';
-  const fx = ((e.clientX || e.touches?.[0]?.clientX || rect.left + rect.width/2) - rect.left) / rect.width * 100;
-  const fy = ((e.clientY || e.touches?.[0]?.clientY || rect.top + rect.height/2) - rect.top) / rect.height * 100;
-  flash.style.setProperty('--fx', `${fx}% ${fy}%`);
-  btn.appendChild(flash);
-  flash.addEventListener('animationend', () => flash.remove());
-});
+      // Flash dorado
+      const flash = document.createElement('span');
+      flash.className = 'btn-flash';
+      const fx = ((e.clientX || e.touches?.[0]?.clientX || rect.left + rect.width / 2) - rect.left) / rect.width * 100;
+      const fy = ((e.clientY || e.touches?.[0]?.clientY || rect.top + rect.height / 2) - rect.top) / rect.height * 100;
+      flash.style.setProperty('--fx', `${fx}% ${fy}%`);
+      btn.appendChild(flash);
+      flash.addEventListener('animationend', () => flash.remove());
+    });
 
-// ── REDIRECCIÓN SI YA HAY SESIÓN ──
-(async () => {
-  await waitForAuth();
-  if (currentUser) {
-    if (currentUser.rol === 'admin') window.location.href = 'admin/index.html';
-    else if (currentUser.rol === 'empleado') window.location.href = 'empleado/index.html';
-  }
-})();
+    // ── REDIRECCIÓN SI YA HAY SESIÓN ──
+    (async () => {
+      await waitForAuth();
+      if (currentUser) {
+        if (currentUser.rol === 'admin') window.location.href = 'admin/index.html';
+        else if (currentUser.rol === 'empleado') window.location.href = 'empleado/index.html';
+      }
+    })();
 
-// ── ATAJOS DE TECLADO ──
-loginEls.user.addEventListener('keydown', e => {
-  if (e.key === 'Enter') loginEls.pass.focus();
-});
-loginEls.pass.addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-loginEls.user.addEventListener('input', () => loginEls.err.classList.remove('show'));
-loginEls.pass.addEventListener('input', () => loginEls.err.classList.remove('show'));
-</script>
+    // ── ATAJOS DE TECLADO ──
+    loginEls.user.addEventListener('keydown', e => {
+      if (e.key === 'Enter') loginEls.pass.focus();
+    });
+    loginEls.pass.addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+    loginEls.user.addEventListener('input', () => loginEls.err.classList.remove('show'));
+    loginEls.pass.addEventListener('input', () => loginEls.err.classList.remove('show'));
+  </script>
 </body>
+
 </html>

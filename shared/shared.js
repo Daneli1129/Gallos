@@ -285,6 +285,10 @@ async function fetchJugadores() {
                 id,
                 bando,
                 monto,
+                monto_total,
+                monto_casado,
+                monto_pendiente,
+                estado,
                 resultado,
                 peleas (
                     numero_pelea,
@@ -302,15 +306,24 @@ async function fetchJugadores() {
     nombre: j.nombre,
     color: j.color,
     saldoAnt: parseFloat(j.saldo_anterior) || 0,
-    apuestas: j.apuestas ? j.apuestas.map(a => ({
-      id: a.id,
-      pelea: a.peleas?.numero_pelea || 0,
-      monto: parseFloat(a.monto) || 0,
-      bando: a.bando,
-      resultado: a.resultado,
-      peleaEstado: a.peleas?.estado || 'espera',
-      peleaGanador: a.peleas?.ganador || null
-    })) : []
+    apuestas: j.apuestas ? j.apuestas.map(a => {
+      const m = parseFloat(a.monto_total) || parseFloat(a.monto) || 0;
+      const mc = parseFloat(a.monto_casado) || (a.estado === 'casado' ? m : 0);
+      const mp = parseFloat(a.monto_pendiente) || (a.estado === 'pendiente' ? m : 0);
+      return {
+        id: a.id,
+        pelea: a.peleas?.numero_pelea || 0,
+        monto: m,
+        montoTotal: m,
+        montoCasado: mc,
+        montoPendiente: mp,
+        estado: a.estado,
+        bando: a.bando,
+        resultado: a.resultado,
+        peleaEstado: a.peleas?.estado || 'espera',
+        peleaGanador: a.peleas?.ganador || null
+      };
+    }) : []
   }));
 }
 
@@ -327,6 +340,10 @@ async function fetchPeleas() {
                 jugador_id,
                 bando,
                 monto,
+                monto_total,
+                monto_casado,
+                monto_pendiente,
+                estado,
                 resultado,
                 jugadores (
                     nombre
@@ -346,14 +363,23 @@ async function fetchPeleas() {
       estado: p.estado,
       ganador: p.ganador || undefined,
       minimizada: old ? old.minimizada : undefined,
-      apuestas: p.apuestas ? p.apuestas.map(a => ({
-        id: a.id,
-        jugadorId: a.jugador_id,
-        nombre: a.jugadores?.nombre || 'Desconocido',
-        bando: a.bando,
-        monto: parseFloat(a.monto) || 0,
-        resultado: a.resultado
-      })) : []
+      apuestas: p.apuestas ? p.apuestas.map(a => {
+        const m = parseFloat(a.monto_total) || parseFloat(a.monto) || 0;
+        const mc = parseFloat(a.monto_casado) || (a.estado === 'casado' || p.estado === 'cerrada' ? m : 0);
+        const mp = parseFloat(a.monto_pendiente) || (a.estado === 'pendiente' && p.estado !== 'cerrada' ? m : 0);
+        return {
+          id: a.id,
+          jugadorId: a.jugador_id,
+          nombre: a.jugadores?.nombre || 'Desconocido',
+          bando: a.bando,
+          monto: m,
+          montoTotal: m,
+          montoCasado: mc,
+          montoPendiente: mp,
+          estado: a.estado,
+          resultado: a.resultado
+        };
+      }) : []
     };
   });
 }
@@ -379,9 +405,11 @@ async function fetchBitacora() {
   }
   bitacora = data.map(b => {
     const d = new Date(b.created_at);
-    const ts = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const fecha = d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const hora = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     return {
-      ts,
+      fecha,
+      hora,
       user: b.usuarios?.nombre_completo || 'Sistema',
       rol: b.usuarios?.rol || 'sistema',
       tipo: b.tipo,
@@ -490,7 +518,7 @@ function calcFicha(j) {
     saldo,
     ganadas: j.apuestas.filter(a => a.resultado === 'ganada'),
     perdidas: j.apuestas.filter(a => a.resultado === 'perdida'),
-    devueltas: j.apuestas.filter(a => a.resultado === 'devuelta' || (a.resultado === 'pendiente' && a.peleaEstado === 'cerrada')),
+    devueltas: j.apuestas.filter(a => a.resultado === 'devuelta' || a.estado === 'devuelto' || (a.resultado === 'pendiente' && a.peleaEstado === 'cerrada')),
     enJuego: j.apuestas.filter(a => a.resultado === 'pendiente' && a.peleaEstado !== 'cerrada'),
     totalGanadas,
     totalPerdidas,
@@ -501,9 +529,17 @@ function calcFicha(j) {
 // ── BITÁCORA ──
 async function logAction(tipo, msg, icon = '🎯') {
   if (!currentUser) return;
+  
+  let msgConUsuario = msg;
+  if (currentUser && currentUser.nombre) {
+    if (!msg.includes('por ') && !msg.includes('Por ') && !msg.includes(currentUser.nombre)) {
+      msgConUsuario = `${msg} · por <strong>${currentUser.nombre}</strong>`;
+    }
+  }
+
   const { error } = await sb.from('bitacora').insert({
     tipo,
-    mensaje: msg,
+    mensaje: msgConUsuario,
     icon,
     usuario_id: currentUser.id
   });
@@ -609,6 +645,7 @@ const I = {
   dg: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--green2)"/></svg>`,
   dr: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--rojo2)"/></svg>`,
   dy: `<svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" fill="var(--gold)"/></svg>`,
+  swap: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 8 16 13"/><line x1="21" y1="8" x2="9" y2="8"/><polyline points="8 21 3 16 8 11"/><line x1="3" y1="16" x2="15" y2="16"/></svg>`
 };
 
 // ── INIT ──

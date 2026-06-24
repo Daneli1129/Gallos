@@ -1,133 +1,157 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Gallo Gold — Empleado</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="../shared/supabase.umd.js"></script>
-<link rel="stylesheet" href="../shared/shared.css">
-<link rel="stylesheet" href="empleado.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gallo Gold — Empleado</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <script src="../shared/supabase.umd.js"></script>
+  <link rel="stylesheet" href="../shared/shared.css">
+  <link rel="stylesheet" href="empleado.css">
 </head>
+
 <body>
 
-<!-- ══ APP SHELL ══ -->
-<div id="app-shell" style="display:flex;width:100%;height:100%;flex-direction:row;position:relative;z-index:1;">
+  <!-- ══ APP SHELL ══ -->
+  <div id="app-shell" style="display:flex;width:100%;height:100%;flex-direction:row;position:relative;z-index:1;">
 
-  <!-- SIDEBAR -->
-  <nav class="nav collapsed" id="nav">
-    <div class="nav-top">
-      <div class="nav-logo">
-        <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 22px; height: 22px; color: #0a0806;">
-          <path d="M12 32C8 44 18 52 30 50c8-1 16-6 20-14 4-8 2-16-4-20" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" opacity=".8"/>
-          <path d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 32L4 30l6 4" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="18" cy="28" r="2.5" fill="currentColor" />
-          <path d="M24 46c-2 6 2 10 6 8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M40 24c4-4 10-6 8-12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-          <path d="M42 26c6-2 10-6 8-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div class="nav-brand">
-        <span class="nav-brand-main">Gallo Gold</span>
-        <span class="nav-brand-sub">Bruno's</span>
-      </div>
-    </div>
-    <div class="nav-body" id="nav-body"></div>
-    <div class="nav-user-area">
-      <div class="nav-user-card">
-        <div class="nav-u-av" id="nav-av">–</div>
-        <div class="nav-u-info">
-          <div class="nav-u-name" id="nav-un">–</div>
-          <div class="nav-u-role" id="nav-ur">Empleado</div>
+    <!-- SIDEBAR -->
+    <nav class="nav collapsed" id="nav">
+      <div class="nav-top">
+        <div class="nav-logo">
+          <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"
+            style="width: 22px; height: 22px; color: #0a0806;">
+            <path d="M12 32C8 44 18 52 30 50c8-1 16-6 20-14 4-8 2-16-4-20" stroke="currentColor" stroke-width="3.2"
+              stroke-linecap="round" opacity=".8" />
+            <path d="M22 18C18 12 12 14 14 20c2 4 6 4 8 2M26 16c2-6 8-6 10-2 2 4-2 6-4 4" stroke="currentColor"
+              stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12 32L4 30l6 4" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <circle cx="18" cy="28" r="2.5" fill="currentColor" />
+            <path d="M24 46c-2 6 2 10 6 8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" />
+            <path d="M40 24c4-4 10-6 8-12" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            <path d="M42 26c6-2 10-6 8-10" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <div class="nav-brand">
+          <span class="nav-brand-main">Gallo Gold</span>
+          <span class="nav-brand-sub">By Pinitos </span>
         </div>
       </div>
-    </div>
-  </nav>
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="detail">
-
-      <!-- Mobile header -->
-      <div class="mob-header-bar" id="mob-hbar">
-        <span class="mob-sel" id="mob-sel" style="font-size:13px;font-weight:700;color:var(--gold);">🐓 Gallo Gold</span>
-        <div class="mob-user-badge" id="mob-user-badge">
-          <div class="mob-u-av" id="mob-av-circle">–</div>
-        </div>
-        <button class="mob-tb-logout" onclick="doLogout()">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Salir
-        </button>
-      </div>
-
-      <!-- Topbar desktop -->
-      <div class="topbar" id="topbar">
-        <div class="tb-spacer"></div>
-        <div class="tb-user">
-          <div class="tb-u-av" id="tb-av">–</div>
-          <div>
-            <div class="tb-u-name" id="tb-un">–</div>
-            <div class="tb-u-role">Empleado</div>
+      <div class="nav-body" id="nav-body"></div>
+      <div class="nav-user-area">
+        <div class="nav-user-card">
+          <div class="nav-u-av" id="nav-av">–</div>
+          <div class="nav-u-info">
+            <div class="nav-u-name" id="nav-un">–</div>
+            <div class="nav-u-role" id="nav-ur">Empleado</div>
           </div>
         </div>
-        <button class="tb-logout" onclick="doLogout()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          Cerrar sesión
-        </button>
       </div>
+    </nav>
 
-      <!-- TAB: PELEAS -->
-      <div class="tab-content" id="tab-peleas">
-        <div class="peleas-wrap">
-          <div class="peleas-toolbar" id="peleas-toolbar"></div>
-          <div class="peleas-scroll"  id="peleas-scroll"></div>
+    <!-- MAIN -->
+    <div class="main">
+      <div class="detail">
+
+        <!-- Mobile header -->
+        <div class="mob-header-bar" id="mob-hbar">
+          <span class="mob-sel" id="mob-sel" style="font-size:13px;font-weight:700;color:var(--gold);">🐓 Gallo
+            Gold</span>
+          <div class="mob-user-badge" id="mob-user-badge">
+            <div class="mob-u-av" id="mob-av-circle">–</div>
+          </div>
+          <button class="mob-tb-logout" onclick="doLogout()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Salir
+          </button>
         </div>
-      </div>
 
-
-
-    </div><!-- /detail -->
-  </div><!-- /main -->
-
-  <!-- Mobile bottom nav -->
-  <nav class="mobile-bottom-nav" id="mob-bottom-nav"></nav>
-
-  <!-- ══ MODAL APOSTADOR ══ -->
-  <div class="modal-overlay" id="modal-ap" style="display:none;" onclick="modalBgClick(event)">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-head">
-        <span style="font-size:18px;">🐓</span>
-        <span class="modal-title" id="modal-title">Agregar Apostador</span>
-        <button class="modal-close" onclick="closeModal()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="modal-steps-container">
-        <div class="modal-steps" id="modal-steps">
-          <div class="modal-steps-fill" id="modal-steps-fill"></div>
-          <div class="ms" id="ms-1">1</div>
-          <div class="ms" id="ms-2">2</div>
-          <div class="ms" id="ms-3">3</div>
-          <div class="ms" id="ms-4">✓</div>
+        <!-- Topbar desktop -->
+        <div class="topbar" id="topbar">
+          <div class="tb-spacer"></div>
+          <div class="tb-user">
+            <div class="tb-u-av" id="tb-av">–</div>
+            <div>
+              <div class="tb-u-name" id="tb-un">–</div>
+              <div class="tb-u-role">Empleado</div>
+            </div>
+          </div>
+          <button class="tb-logout" onclick="doLogout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Cerrar sesión
+          </button>
         </div>
+
+        <!-- TAB: PELEAS -->
+        <div class="tab-content" id="tab-peleas">
+          <div class="peleas-wrap">
+            <div class="peleas-toolbar" id="peleas-toolbar"></div>
+            <div class="peleas-scroll" id="peleas-scroll"></div>
+          </div>
+        </div>
+
+
+
+      </div><!-- /detail -->
+    </div><!-- /main -->
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-bottom-nav" id="mob-bottom-nav"></nav>
+
+    <!-- ══ MODAL APOSTADOR ══ -->
+    <div class="modal-overlay" id="modal-ap" style="display:none;" onclick="modalBgClick(event)">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <span style="font-size:18px;">🐓</span>
+          <span class="modal-title" id="modal-title">Agregar Apostador</span>
+          <button class="modal-close" onclick="closeModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-steps-container">
+          <div class="modal-steps" id="modal-steps">
+            <div class="modal-steps-fill" id="modal-steps-fill"></div>
+            <div class="ms" id="ms-1">1</div>
+            <div class="ms" id="ms-2">2</div>
+            <div class="ms" id="ms-3">3</div>
+            <div class="ms" id="ms-4">✓</div>
+          </div>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-foot" id="modal-foot"></div>
       </div>
-      <div class="modal-body" id="modal-body"></div>
-      <div class="modal-foot" id="modal-foot"></div>
     </div>
+
+
+
+  </div><!-- /app-shell -->
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <div class="toast-line" id="tline"></div>
+    <div class="toast-msg" id="tmsg"></div>
   </div>
 
-
-
-</div><!-- /app-shell -->
-
-<!-- Toast -->
-<div class="toast" id="toast">
-  <div class="toast-line" id="tline"></div>
-  <div class="toast-msg"  id="tmsg"></div>
-</div>
-
-<script src="../shared/shared.js?v=2"></script>
-<script src="empleado.js?v=2"></script>
+  <script src="../shared/shared.js?v=2"></script>
+  <script src="empleado.js?v=2"></script>
 </body>
+
 </html>

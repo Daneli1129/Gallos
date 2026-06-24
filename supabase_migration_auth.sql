@@ -66,9 +66,9 @@ ALTER TABLE public.peleas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.apuestas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bitacora ENABLE ROW LEVEL SECURITY;
 
--- ── usuarios: solo el propio usuario puede ver/editar su registro ──
-CREATE POLICY "usuarios_select_own" ON public.usuarios
-  FOR SELECT USING (auth.uid() = auth_id);
+-- ── usuarios: todos los usuarios autenticados pueden ver su información, solo el propio usuario puede editar su registro ──
+CREATE POLICY "usuarios_select_auth" ON public.usuarios
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 CREATE POLICY "usuarios_update_own" ON public.usuarios
   FOR UPDATE USING (auth.uid() = auth_id);

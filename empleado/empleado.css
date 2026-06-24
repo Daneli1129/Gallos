@@ -582,6 +582,35 @@
   filter: grayscale(1); pointer-events: none;
 }
 
+/* Botón iniciar pelea más grande y llamativo (Verde) */
+.pb-st-big.btn-play-start {
+  background: rgba(46, 204, 113, 0.16);
+  border: 1.5px solid rgba(46, 204, 113, 0.45);
+  color: var(--green2);
+  width: 38px;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.16);
+}
+.pb-st-big.btn-play-start svg {
+  width: 14px;
+  height: 14px;
+}
+.pb-st-big.btn-play-start:hover {
+  background: rgba(46, 204, 113, 0.35);
+  border-color: var(--green2);
+  box-shadow: 0 0 18px rgba(46, 204, 113, 0.45);
+  color: #ffffff;
+  transform: scale(1.15);
+}
+.pb-st-big.btn-play-start.locked-play {
+  background: rgba(255,255,255,0.02);
+  border-color: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.2);
+  cursor: not-allowed;
+  opacity: 0.25;
+}
+
 /* ── Botón eliminar v2 (más visible) ── */
 .pb-del-btn-v2 {
   width: 34px; height: 30px;
@@ -778,15 +807,62 @@
 }
 .ap-monto.g { color: var(--green2); }
 .ap-monto.p { color: var(--rojo2); }
-.ap-del {
+.ap-row-actions {
   grid-column: 2; grid-row: 1 / span 2;
   align-self: center;
-  background: none; border: none; cursor: pointer;
-  color: var(--text3); padding: 4px; border-radius: 4px;
-  display: flex; align-items: center; flex-shrink: 0; transition: background .12s, color .12s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.ap-del:hover { color: var(--rojo2); background: var(--rojo-bg); }
+.ap-del {
+  background: rgba(231, 76, 60, 0.08);
+  border: 1px solid rgba(231, 76, 60, 0.25);
+  cursor: pointer;
+  color: var(--rojo2);
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  width: 24px;
+  height: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+}
+.ap-del:hover {
+  background: rgba(231, 76, 60, 0.22);
+  border-color: var(--rojo2);
+  color: #fff;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
 .ap-del svg { width: 10px; height: 10px; }
+
+.ap-swap {
+  background: rgba(201, 168, 76, 0.08);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  cursor: pointer;
+  color: var(--gold);
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  width: 24px;
+  height: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+}
+.ap-swap:hover {
+  background: rgba(201, 168, 76, 0.2);
+  border-color: var(--gold);
+  color: #fff;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(201, 168, 76, 0.3);
+}
+.ap-swap svg { width: 10px; height: 10px; }
 /* Estado vacío */
 .pb-empty {
   text-align: center;
