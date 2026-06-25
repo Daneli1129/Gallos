@@ -367,7 +367,7 @@ function renderMobJugList(list) {
     d.innerHTML = `
       <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
       <div class="p-info">
-        <div class="p-name">${sanitize(j.nombre)}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}</div>
+        <div class="p-name">${sanitize(j.nombre)}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}${j.estadoCandado ? ' <span style="font-size: 10px; color: var(--rojo2);" title="Crédito Bloqueado">🔒</span>' : ''}</div>
         <div class="p-meta">
           <span class="p-stats">
             <span class="p-stat-tot">${j.apuestas.length} apuestas</span>
@@ -402,7 +402,7 @@ function renderJugList(list) {
     d.innerHTML = `
       <div class="p-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
       <div class="p-info">
-        <div class="p-name">${sanitize(j.nombre)}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}</div>
+        <div class="p-name">${sanitize(j.nombre)}${idx < 3 ? `<span class="p-rank">${idx + 1}</span>` : ''}${j.estadoCandado ? ' <span style="font-size: 10px; color: var(--rojo2);" title="Crédito Bloqueado">🔒</span>' : ''}</div>
         <div class="p-meta">
           <span class="p-stats">
             <span class="p-stat-tot">${j.apuestas.length} apuestas</span>
@@ -492,6 +492,43 @@ function renderFicha() {
           </div>
         </div>
       </div>
+
+      <!-- Módulo de Crédito y Control de Apostador -->
+      <div class="fc-saldo-ant" style="margin-top: 12px; border-top: 1px solid var(--border2); padding-top: 12px;">
+        <div class="fc-sa-row" style="margin-bottom: 8px;">
+          <span class="fc-sa-lbl">Límite de Crédito</span>
+          <div class="fc-sa-inp-grp">
+            <span class="fc-sa-prefix">$</span>
+            <input class="sa-inp-admin" type="number" value="${j.limiteCredito}" onchange="updLimiteCredito('${j.id}', this.value)">
+          </div>
+        </div>
+        <div class="fc-sa-row" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span class="fc-sa-lbl">Crédito Utilizado</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-weight:bold; color:${j.creditoUtilizado > 0 ? 'var(--rojo2)' : 'var(--text)'};">
+            ${fmt(j.creditoUtilizado)}
+          </span>
+        </div>
+        <div class="fc-sa-row" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <span class="fc-sa-lbl">Estado Candado</span>
+          <select class="sa-inp-admin" onchange="toggleEstadoCandado('${j.id}', this.value === 'bloqueado')" style="width: auto; padding: 4px 8px; background: #222; color: #fff; border: 1px solid var(--border2); border-radius: 4px; font-family: inherit; font-size: 11px;">
+            <option value="activo" ${!j.estadoCandado ? 'selected' : ''}>🔓 Activo (Desbloqueado)</option>
+            <option value="bloqueado" ${j.estadoCandado ? 'selected' : ''}>🔒 Bloqueado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fc-saldo-ant" style="margin-top: 12px; padding: 12px; background: rgba(199, 168, 76, 0.05); border: 1px dashed var(--gold); border-radius: 6px;">
+        <div style="font-size:10px; color:var(--gold); font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; font-family:'JetBrains Mono',monospace;">Registrar Pago de Crédito</div>
+        <div style="display:flex; gap:8px;">
+          <input class="sa-inp-admin" id="pago-monto-${j.id}" type="number" placeholder="Monto pagado" style="flex:1; height: 32px; font-size: 12px;">
+          <button class="btn-sm" onclick="uiRegistrarPago('${j.id}')" style="background:var(--gold); color:#000; font-weight:bold; border:none; border-radius:4px; padding:0 16px; cursor:pointer; height: 32px;">Registrar</button>
+        </div>
+        <div style="margin-top:8px; display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="pago-desbloquear-${j.id}" checked style="margin:0; cursor:pointer;">
+          <label for="pago-desbloquear-${j.id}" style="font-size:10px; color:var(--text2); cursor:pointer; user-select:none;">Desbloquear candado al pagar</label>
+        </div>
+      </div>
+
       <div class="fc-tabla">
         <div class="fc-tabla-hdr">
           <div style="border-right:1px solid var(--border2);"><div class="fc-col-hd p">Perdidas</div></div>
@@ -543,6 +580,89 @@ async function updSaldoAnt(id, val) {
 
   await refreshData();
   toast(`Saldo anterior de <strong>${j.nombre}</strong> actualizado`, 'success');
+}
+
+async function updLimiteCredito(id, val) {
+  const j = jugadores.find(x => x.id === id);
+  if (!j) return;
+  const numericVal = parseFloat(val) || 0;
+
+  const { error } = await sb
+    .from('jugadores')
+    .update({ limite_credito: numericVal })
+    .eq('id', id);
+  if (error) {
+    toast(`⚠️ Error al actualizar límite de crédito: ${error.message}`, 'error');
+    return;
+  }
+
+  await logAction('config', `Límite de crédito de <strong>${j.nombre}</strong> actualizado a ${fmt(numericVal)}`, '⚙️');
+  await refreshData();
+  toast(`Límite de crédito de <strong>${j.nombre}</strong> actualizado`, 'success');
+}
+
+async function toggleEstadoCandado(id, bloqueado) {
+  const j = jugadores.find(x => x.id === id);
+  if (!j) return;
+
+  const { error } = await sb
+    .from('jugadores')
+    .update({ estado_candado: bloqueado })
+    .eq('id', id);
+  if (error) {
+    toast(`⚠️ Error al actualizar estado del candado: ${error.message}`, 'error');
+    return;
+  }
+
+  const actMsg = bloqueado ? 'BLOQUEADO (candado activado)' : 'DESBLOQUEADO (candado desactivado)';
+  const actIcon = bloqueado ? '🔒' : '🔓';
+  await logAction('config', `Estado de crédito de <strong>${j.nombre}</strong> cambiado a <strong>${actMsg}</strong>`, actIcon);
+  await refreshData();
+  toast(`Estado de crédito de <strong>${j.nombre}</strong> actualizado`, 'success');
+}
+
+async function uiRegistrarPago(id) {
+  const inp = document.getElementById(`pago-monto-${id}`);
+  const chk = document.getElementById(`pago-desbloquear-${id}`);
+  if (!inp) return;
+  const monto = parseFloat(inp.value) || 0;
+  if (monto <= 0) {
+    toast('Ingresa un monto de pago válido mayor a cero', 'error');
+    return;
+  }
+  const desbloquear = chk ? chk.checked : false;
+  await registrarPagoApostador(id, monto, desbloquear);
+}
+
+async function registrarPagoApostador(id, monto, desbloquear) {
+  const j = jugadores.find(x => x.id === id);
+  if (!j) return;
+
+  const nuevoCredito = Math.max(0, j.creditoUtilizado - monto);
+  const updates = {
+    credito_utilizado: nuevoCredito
+  };
+  if (desbloquear) {
+    updates.estado_candado = false;
+  }
+
+  const { error } = await sb
+    .from('jugadores')
+    .update(updates)
+    .eq('id', id);
+
+  if (error) {
+    toast(`⚠️ Error al registrar pago: ${error.message}`, 'error');
+    return;
+  }
+
+  let actMsg = `Registró pago de crédito de ${fmt(monto)} para <strong>${j.nombre}</strong>`;
+  if (desbloquear && j.estadoCandado) {
+    actMsg += ` y desactivó candado de crédito`;
+  }
+  await logAction('corte_jornada', actMsg, '💵');
+  await refreshData();
+  toast(`Pago de crédito registrado con éxito para <strong>${j.nombre}</strong>`, 'success');
 }
 
 // ── PELEAS (solo lectura) ─────────────────────────────────

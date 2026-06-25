@@ -825,11 +825,11 @@ function mostrarBloqueoNuevaPelea() {
 let _modal = {
   step: 1, peleaNum: null,
   nombre: '', jugadorId: null, esNuevo: false,
-  bando: null, monto: null
+  bando: null, monto: null, tipoPago: 'efectivo'
 };
 
 function openModalAp(pN) {
-  _modal = { step: 1, peleaNum: pN, nombre: '', jugadorId: null, esNuevo: false, bando: null, monto: null };
+  _modal = { step: 1, peleaNum: pN, nombre: '', jugadorId: null, esNuevo: false, bando: null, monto: null, tipoPago: 'efectivo' };
   document.getElementById('modal-ap').style.display = 'flex';
   renderModalStep();
 }
@@ -925,6 +925,49 @@ function renderModalStep() {
   else if (m.step === 3) {
     const amts = [500, 1000, 1500, 2000];
     const esOtro = m.monto && !amts.includes(m.monto);
+
+    // Recuadro de información de crédito
+    const j = jugadores.find(x => x.id === m.jugadorId);
+    let creditInfoHtml = '';
+    if (j) {
+      const creditoDisponible = j.limiteCredito - j.creditoUtilizado;
+      creditInfoHtml = `
+        <div class="credit-info-box" style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;font-size:11px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
+            <span style="color:var(--text3);">Límite de crédito:</span>
+            <span style="color:var(--text);font-family:'JetBrains Mono',monospace;">${fmt(j.limiteCredito)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
+            <span style="color:var(--text3);">Crédito utilizado:</span>
+            <span style="color:var(--text);font-family:'JetBrains Mono',monospace;">${fmt(j.creditoUtilizado)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
+            <span style="color:var(--text3);">Crédito disponible:</span>
+            <span style="color:${creditoDisponible >= 0 ? 'var(--green2)' : 'var(--rojo2)'};font-family:'JetBrains Mono',monospace;font-weight:bold;">${fmt(creditoDisponible)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text3);">Estado candado:</span>
+            <span style="color:${j.estadoCandado ? 'var(--rojo2)' : 'var(--green2)'};font-weight:bold;">${j.estadoCandado ? '🔒 BLOQUEADO' : '🔓 ACTIVO'}</span>
+          </div>
+        </div>`;
+    } else {
+      creditInfoHtml = `
+        <div class="credit-info-box" style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;font-size:11px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
+            <span style="color:var(--text3);">Límite de crédito (nuevo):</span>
+            <span style="color:var(--text);font-family:'JetBrains Mono',monospace;">${fmt(5000.00)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
+            <span style="color:var(--text3);">Crédito disponible:</span>
+            <span style="color:var(--green2);font-family:'JetBrains Mono',monospace;font-weight:bold;">${fmt(5000.00)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text3);">Estado candado:</span>
+            <span style="color:var(--green2);font-weight:bold;">🔓 ACTIVO</span>
+          </div>
+        </div>`;
+    }
+
     body.innerHTML = `
       <div style="font-size:12px;color:var(--text2);margin-bottom:12px;font-weight:600;">
         👤 <strong style="color:var(--text);">${m.nombre}</strong> ·
@@ -943,7 +986,13 @@ function renderModalStep() {
                placeholder="$0"
                value="${esOtro ? '$' + Number(m.monto).toLocaleString('en-US') : ''}"
                oninput="otroChange(this.value)">
-      </div>`;
+      </div>
+      <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.7px;margin-top:16px;margin-bottom:8px;">Método de pago</div>
+      <div class="modal-amt-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom:12px;">
+        <button class="mab${m.tipoPago === 'efectivo' ? ' sel' : ''}" onclick="selPayment('efectivo')">💵 Efectivo</button>
+        <button class="mab${m.tipoPago === 'credito' ? ' sel' : ''}" onclick="selPayment('credito')">💳 Crédito</button>
+      </div>
+      ${creditInfoHtml}`;
     foot.innerHTML = `
       <button class="mbtn ghost" onclick="goBack()">← Atrás</button>
       <button class="mbtn primary" id="mb-n3" onclick="modalNext3()" ${(m.monto && m.monto > 0) ? '' : 'disabled'}>Revisar →</button>`;
@@ -951,11 +1000,30 @@ function renderModalStep() {
 
   // ── PASO 4: Confirmar ────────────────────────────────────
   else if (m.step === 4) {
+    const j = jugadores.find(x => x.id === m.jugadorId);
+    const estadoCandado = j ? j.estadoCandado : false;
+    const creditoUtilizado = j ? j.creditoUtilizado : 0;
+    const limiteCredito = j ? j.limiteCredito : 5000;
+
+    let errorMsg = '';
+    if (m.tipoPago === 'credito') {
+      if (estadoCandado) {
+        errorMsg = 'Usuario bloqueado por administración';
+      } else if (m.monto + creditoUtilizado > limiteCredito) {
+        errorMsg = 'Crédito excedido';
+      }
+    }
+
     let alertH = '';
     if (m.esNuevo) {
       alertH = `<div class="modal-alert new">
            <span class="modal-alert-ico">✨</span>
            <div class="modal-alert-txt"><strong>Persona nueva</strong> — Se registrará en el sistema automáticamente.</div>
+         </div>`;
+    } else if (errorMsg) {
+      alertH = `<div class="modal-alert error" style="background:rgba(231,76,60,0.15);border:1px solid var(--rojo2);color:#ff6b6b;padding:10px;border-radius:6px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+           <span style="font-size:16px;">⚠️</span>
+           <div class="modal-alert-txt"><strong>Atención:</strong> ${errorMsg}</div>
          </div>`;
     }
 
@@ -973,11 +1041,16 @@ function renderModalStep() {
             ${fmt(m.monto)}
           </span>
         </div>
+        <div class="mcb-row"><span class="mcb-lbl">Método Pago</span>
+          <span class="mcb-val" style="text-transform: capitalize; color: ${m.tipoPago === 'credito' ? 'var(--gold)' : 'var(--text)'}; font-weight: bold;">
+            ${m.tipoPago === 'credito' ? '💳 Crédito' : '💵 Efectivo'}
+          </span>
+        </div>
       </div>`;
 
     foot.innerHTML = `
       <button class="mbtn ghost" onclick="goBack()">Editar</button>
-      <button class="mbtn primary" onclick="modalConfirm()">
+      <button class="mbtn primary" onclick="modalConfirm()" ${errorMsg ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
         Aceptar
       </button>`;
   }
@@ -1009,6 +1082,11 @@ function modalNext2() {
   renderModalStep();
 }
 
+function selPayment(type) {
+  _modal.tipoPago = type;
+  renderModalStep();
+}
+
 function modalNext3() {
   if (!_modal.monto || _modal.monto <= 0) return;
   _modal.step = 4;
@@ -1037,8 +1115,8 @@ function filterSugs(q) {
     return `<div class="modal-sug-item" onclick="selSug('${j.id}')">
       <div class="modal-sug-av" style="background:${j.color}22;color:${j.color};border-color:${j.color}55;">${initials(j.nombre)}</div>
       <div>
-        <div class="modal-sug-name">${sanitize(j.nombre)}</div>
-        <div class="modal-sug-bal" style="color:${sc};">${saldo >= 0 ? '+' : '−'}${fmt(saldo)} · ${j.apuestas.length} apuestas${record ? ' · ' + record : ''}</div>
+        <div class="modal-sug-name">${sanitize(j.nombre)}${j.estadoCandado ? ' <span style="color:var(--rojo2); font-size:10px;">🔒</span>' : ''}</div>
+        <div class="modal-sug-bal" style="color:${sc};">${saldo >= 0 ? '+' : '−'}${fmt(saldo)} · ${j.apuestas.length} ap. ${j.creditoUtilizado > 0 ? `· 💳 ${fmt(j.creditoUtilizado)}` : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -1179,13 +1257,31 @@ async function modalConfirm() {
     await logAction('nuevo-jugador', `Nuevo apostador registrado: <strong>${m.nombre}</strong>`, '+');
   }
 
+  // Validaciones finales de seguridad de Crédito antes de llamar a la DB
+  if (m.tipoPago === 'credito') {
+    const j = jugadores.find(x => x.id === jId);
+    const estadoCandado = j ? j.estadoCandado : false;
+    const creditoUtilizado = j ? j.creditoUtilizado : 0;
+    const limiteCredito = j ? j.limiteCredito : 5000;
+
+    if (estadoCandado) {
+      toast('Usuario bloqueado por administración', 'error');
+      return;
+    }
+    if (m.monto + creditoUtilizado > limiteCredito) {
+      toast('Crédito excedido', 'error');
+      return;
+    }
+  }
+
   // B. Registrar la apuesta usando la función P2P
   const { error } = await sb.rpc('registrar_apuesta_p2p', {
     p_pelea_num: m.peleaNum,
     p_jugador_id: jId,
     p_bando: m.bando,
     p_monto: m.monto,
-    p_autorizado_por: null
+    p_autorizado_por: null,
+    p_tipo_pago: m.tipoPago
   });
 
   if (error) {

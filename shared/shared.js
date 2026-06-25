@@ -281,6 +281,9 @@ async function fetchJugadores() {
             nombre,
             color,
             saldo_anterior,
+            limite_credito,
+            credito_utilizado,
+            estado_candado,
             apuestas (
                 id,
                 bando,
@@ -290,6 +293,7 @@ async function fetchJugadores() {
                 monto_pendiente,
                 estado,
                 resultado,
+                tipo_pago,
                 peleas (
                     numero_pelea,
                     estado,
@@ -306,6 +310,9 @@ async function fetchJugadores() {
     nombre: j.nombre,
     color: j.color,
     saldoAnt: parseFloat(j.saldo_anterior) || 0,
+    limiteCredito: parseFloat(j.limite_credito) || 0,
+    creditoUtilizado: parseFloat(j.credito_utilizado) || 0,
+    estadoCandado: !!j.estado_candado,
     apuestas: j.apuestas ? j.apuestas.map(a => {
       const m = parseFloat(a.monto_total) || parseFloat(a.monto) || 0;
       const mc = parseFloat(a.monto_casado) || (a.estado === 'casado' ? m : 0);
@@ -320,6 +327,7 @@ async function fetchJugadores() {
         estado: a.estado,
         bando: a.bando,
         resultado: a.resultado,
+        tipoPago: a.tipo_pago || 'efectivo',
         peleaEstado: a.peleas?.estado || 'espera',
         peleaGanador: a.peleas?.ganador || null
       };
@@ -345,6 +353,7 @@ async function fetchPeleas() {
                 monto_pendiente,
                 estado,
                 resultado,
+                tipo_pago,
                 jugadores (
                     nombre
                 )
@@ -377,7 +386,8 @@ async function fetchPeleas() {
           montoCasado: mc,
           montoPendiente: mp,
           estado: a.estado,
-          resultado: a.resultado
+          resultado: a.resultado,
+          tipoPago: a.tipo_pago || 'efectivo'
         };
       }) : []
     };
