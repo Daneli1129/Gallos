@@ -1,0 +1,49 @@
+{
+  "_backup_date": "2026-07-07",
+  "_project_ref": "nqrprvaszwocvlrjsuwr",
+  "_note": "Backup manual previo a migración player_view. Usar solo como referencia.",
+  "configuraciones": [
+    { "clave": "comision_porcentaje", "valor": "10" },
+    { "clave": "limite_credito", "valor": "5000" },
+    { "clave": "pin_autorizacion", "valor": "1234" }
+  ],
+  "jugadores": [
+    { "id": "AL5-646", "nombre": "Alejandra Cruz", "color": "#7c3aed", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-15T04:13:49.174102", "updated_at": "2026-06-15T04:13:49.174102" },
+    { "id": "AL8-493", "nombre": "Alexandra Ramirez", "color": "#C0392B", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-15T03:39:21.11633", "updated_at": "2026-06-15T03:39:21.11633" },
+    { "id": "DA10-348", "nombre": "Danna Gonzalez", "color": "#E74C3C", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-15T03:40:11.525028", "updated_at": "2026-06-15T03:40:11.525028" },
+    { "id": "DA8-403", "nombre": "Dayra Cruz", "color": "#C0392B", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-24T02:18:30.892786", "updated_at": "2026-06-24T02:18:30.892786" },
+    { "id": "DI4-247", "nombre": "Diana Gonzalez", "color": "#D4A24A", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-15T03:53:02.853094", "updated_at": "2026-06-15T03:53:02.853094" },
+    { "id": "EL9-413", "nombre": "Elian Gonzalez", "color": "#E8C97A", "saldo_anterior": 2, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-15T03:39:47.863576", "updated_at": "2026-06-15T03:39:47.863576" },
+    { "id": "JO8-300", "nombre": "José Gonzalez", "color": "#C0392B", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-24T02:19:49.543136", "updated_at": "2026-06-24T02:19:49.543136" },
+    { "id": "JU7-446", "nombre": "Juan Perez", "color": "#C9A84C", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-20T01:13:11.074501", "updated_at": "2026-06-20T01:13:11.074501" },
+    { "id": "YA6-394", "nombre": "Yarel Arizmendi", "color": "#3AB0FF", "saldo_anterior": 0, "limite_credito": 5000, "credito_utilizado": 0, "estado_candado": false, "registrado_por": 3, "created_at": "2026-06-15T04:14:20.635749", "updated_at": "2026-06-15T04:14:20.635749" }
+  ],
+  "peleas": [
+    { "id": 2, "numero_pelea": 1, "estado": "cerrada", "ganador": "verde", "created_at": "2026-06-22T19:22:50.380192" },
+    { "id": 4, "numero_pelea": 2, "estado": "cerrada", "ganador": "rojo", "created_at": "2026-06-22T19:33:52.029929" },
+    { "id": 6, "numero_pelea": 3, "estado": "cerrada", "ganador": "anulada", "created_at": "2026-06-24T02:16:20.253249" },
+    { "id": 12, "numero_pelea": 4, "estado": "cerrada", "ganador": "anulada", "created_at": "2026-06-24T03:43:44.745158" },
+    { "id": 19, "numero_pelea": 5, "estado": "cerrada", "ganador": "rojo", "created_at": "2026-06-24T05:01:45.092749" }
+  ],
+  "apuestas": [
+    { "id": "bb2f91c9-3fc7-4622-8306-63827282ba23", "pelea_id": 2, "jugador_id": "EL9-413", "bando": "verde", "monto": 5000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "ganada", "tipo_pago": "efectivo" },
+    { "id": "4733fcee-0d45-4d7e-9f97-0aa45434377c", "pelea_id": 2, "jugador_id": "AL8-493", "bando": "rojo", "monto": 2000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "perdida", "tipo_pago": "efectivo" },
+    { "id": "04802c20-a891-450b-9770-d50436311401", "pelea_id": 4, "jugador_id": "EL9-413", "bando": "rojo", "monto": 2000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "ganada", "tipo_pago": "efectivo" },
+    { "id": "93e20431-aca8-4678-8993-decda7a5081c", "pelea_id": 4, "jugador_id": "DA10-348", "bando": "verde", "monto": 2000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "perdida", "tipo_pago": "efectivo" },
+    { "id": "b204afc9-37c2-410b-b1e0-0695f47da2b6", "pelea_id": 6, "jugador_id": "AL8-493", "bando": "rojo", "monto": 500, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "devuelta", "tipo_pago": "efectivo" },
+    { "id": "138c7841-b0e4-490c-b211-76b4f09d8376", "pelea_id": 6, "jugador_id": "EL9-413", "bando": "verde", "monto": 1000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "devuelta", "tipo_pago": "efectivo" },
+    { "id": "7c717c11-de8d-4acc-b10d-9ce20426a67a", "pelea_id": 6, "jugador_id": "DA10-348", "bando": "rojo", "monto": 500, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "devuelta", "tipo_pago": "efectivo" },
+    { "id": "a05b7653-fd50-4522-8ffe-70f209266bb7", "pelea_id": 6, "jugador_id": "DI4-247", "bando": "verde", "monto": 2000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "devuelta", "tipo_pago": "efectivo" },
+    { "id": "11217b85-53f7-499f-acc8-2674031ecba4", "pelea_id": 6, "jugador_id": "YA6-394", "bando": "rojo", "monto": 2000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "devuelta", "tipo_pago": "efectivo" },
+    { "id": "e41bcc6d-8e52-4274-93aa-5b3647e8fcf3", "pelea_id": 6, "jugador_id": "AL5-646", "bando": "verde", "monto": 3000, "monto_total": 0, "monto_casado": 0, "monto_pendiente": 0, "estado": "pendiente", "resultado": "devuelta", "tipo_pago": "efectivo" },
+    { "id": "d8845c58-7d30-46cb-bd3e-9a2af4b8a374", "pelea_id": 19, "jugador_id": "DI4-247", "bando": "rojo", "monto": 500, "monto_total": 500, "monto_casado": 500, "monto_pendiente": 0, "estado": "casado", "resultado": "ganada", "tipo_pago": "efectivo" },
+    { "id": "aadc6035-e388-4caf-9fb8-380ea19c8f2f", "pelea_id": 19, "jugador_id": "AL5-646", "bando": "verde", "monto": 500, "monto_total": 500, "monto_casado": 500, "monto_pendiente": 0, "estado": "casado", "resultado": "perdida", "tipo_pago": "efectivo" }
+  ],
+  "usuarios": [
+    { "id": 2, "username": "eliaglz", "nombre_completo": "Elián González", "rol": "admin", "esta_conectado": false, "auth_id": "77b58d38-65d9-417f-913c-bc175ca766fd", "created_at": "2026-06-12T05:01:36.189075", "updated_at": "2026-06-12T05:01:36.189075", "ultimo_acceso": "2026-06-25T05:21:43.025" },
+    { "id": 3, "username": "vgonzalez", "nombre_completo": "Vanessa González", "rol": "empleado", "esta_conectado": true, "auth_id": "d86109eb-966b-4ab4-8f01-b7c0d5cfda10", "created_at": "2026-06-12T05:01:36.189075", "updated_at": "2026-06-12T05:01:36.189075", "ultimo_acceso": "2026-07-07T19:44:38.439" }
+  ],
+  "apuestas_emparejadas": [
+    { "id": "d6a895df-fda4-4528-9331-590c8f5b34db", "pelea_id": 19, "apuesta_rojo_id": "d8845c58-7d30-46cb-bd3e-9a2af4b8a374", "apuesta_verde_id": "aadc6035-e388-4caf-9fb8-380ea19c8f2f", "monto_emparejado": 500, "created_at": "2026-06-24T05:02:23.326521+00:00" }
+  ]
+}

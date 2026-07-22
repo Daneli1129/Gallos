@@ -658,6 +658,33 @@ const I = {
   swap: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 8 16 13"/><line x1="21" y1="8" x2="9" y2="8"/><polyline points="8 21 3 16 8 11"/><line x1="3" y1="16" x2="15" y2="16"/></svg>`
 };
 
+// ── PLAYER VIEW PIN ──
+async function getPlayerPin() {
+  const { data } = await sb.from('configuraciones').select('valor').eq('clave', 'player_pin').maybeSingle();
+  return data?.valor || null;
+}
+
+async function setPlayerPin(pin) {
+  const { error } = await sb.from('configuraciones').upsert(
+    { clave: 'player_pin', valor: pin },
+    { onConflict: 'clave' }
+  );
+  if (error) console.error('Error al guardar PIN:', error);
+  return !error;
+}
+
+function generatePlayerPin() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function ensurePlayerPin() {
+  const existing = await getPlayerPin();
+  if (existing) return existing;
+  const pin = generatePlayerPin();
+  await setPlayerPin(pin);
+  return pin;
+}
+
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', async () => {
   await initAuth();

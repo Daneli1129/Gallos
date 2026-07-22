@@ -106,6 +106,9 @@ function setTab(tab) {
   document.getElementById(`ni-${tab}`)?.classList.add('active');
   document.getElementById(`mob-ni-${tab}`)?.classList.add('active');
 
+  // Refrescar datos desde Supabase al cambiar de pestaña
+  refreshData();
+
   if (tab === 'fichas') {
     renderJugList(jugadores);
     if (!selectedJugador) {
@@ -953,7 +956,14 @@ function renderToolbar() {
         </button>`).join('')}
     </div>
     <div class="ctrl-sep"></div>
-    <span class="ro-badge">Solo lectura</span>`;
+    <span class="ro-badge">Solo lectura</span>
+    <div class="ctrl-sep"></div>
+    <div class="pin-badge" id="pin-badge">
+      <span class="pin-lbl">📺 PIN</span>
+      <span class="pin-code" id="pin-code">······</span>
+      <button class="pin-btn" onclick="copyPlayerPin()" title="Copiar PIN">📋</button>
+      <button class="pin-btn" onclick="refreshPlayerPin()" title="Generar nuevo PIN">↻</button>
+    </div>`;
 
   // Insertar banner después del toolbar si hay pelea activa
   const wrap = document.getElementById('peleas-toolbar').parentElement;
@@ -965,6 +975,41 @@ function renderToolbar() {
     const toolbar = document.getElementById('peleas-toolbar');
     toolbar.insertAdjacentElement('afterend', bannerEl.firstElementChild);
   }
+
+  loadPlayerPinBadge();
+}
+
+async function loadPlayerPinBadge() {
+  const el = document.getElementById('pin-code');
+  if (!el) return;
+  const pin = await getPlayerPin();
+  el.textContent = pin || '——';
+  el.style.opacity = pin ? '1' : '.4';
+}
+
+async function copyPlayerPin() {
+  const pin = await getPlayerPin();
+  if (!pin) { toast('No hay PIN configurado', 'error'); return; }
+  try {
+    await navigator.clipboard.writeText(pin);
+    toast('PIN copiado: <strong>' + pin + '</strong>', 'success');
+  } catch {
+    toast('PIN: ' + pin, 'info');
+  }
+}
+
+async function refreshPlayerPin() {
+  const ok = await showConfirm('¿Generar nuevo PIN para la vista de espectadores?<br><span style="font-size:12px;color:var(--text3);">El PIN anterior dejará de funcionar.</span>', '↻', 'Generar', 'primary');
+  if (!ok) return;
+  const pin = generatePlayerPin();
+  await setPlayerPin(pin);
+  await logAction('config', 'PIN de vista de espectadores regenerado a <strong>' + pin + '</strong>', '📺');
+  const el = document.getElementById('pin-code');
+  if (el) {
+    el.textContent = pin;
+    el.style.opacity = '1';
+  }
+  toast('Nuevo PIN: <strong>' + pin + '</strong>', 'success');
 }
 
 function toggleMin(num) {

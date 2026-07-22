@@ -1,0 +1,115 @@
+---
+name: "[Legacy SG] Gallos Gold Premium"
+slug: legacy-style-guide-style_ac05a5081c08
+modes: [light]
+color:
+  palette:
+    canvas: "#ffffff"
+    ink: "#1a1a1a"
+    ink-2: "#555555"
+    ink-3: "#8a8a8a"
+    line: "#e2e2e2"
+    primary: "#C9A84C"
+    on-primary: "#ffffff"
+    primary-hover: "#E8C97A"
+    secondary: "#A8862B"
+    bg-page: "#000000"
+    bg-surface: "#0a0a0a"
+    text-primary: "#FFFFFF"
+    text-secondary: "#D4D4D4"
+    text-muted: "#A3A3A3"
+    border: "rgba(255,255,255,0.06)"
+    accent: "#E8C97A"
+  semantic:
+    background.canvas: "{color.palette.canvas}"
+    surface.default: "{color.palette.canvas}"
+    surface.raised: "{color.palette.canvas}"
+    text.primary: "{color.palette.ink}"
+    text.secondary: "{color.palette.ink-2}"
+    text.tertiary: "{color.palette.ink-3}"
+    text.link: "{color.palette.primary}"
+    border.default: "{color.palette.line}"
+    border.focus: "{color.palette.primary}"
+    primary.bg: "{color.palette.primary}"
+    primary.fg: "{color.palette.on-primary}"
+typography:
+  family: { primary: "Outfit" }
+  textStyle:
+    heading-lg: { fontFamily: "Outfit", fontSize: "24px", fontWeight: 600, lineHeight: 1.2 }
+    body-md: { fontFamily: "Outfit", fontSize: "15px", fontWeight: 400, lineHeight: 1.5 }
+spacing:
+  xs: "0.5rem"
+  sm: "1rem"
+  md: "1.5rem"
+  lg: "2rem"
+  xl: "3rem"
+radius:
+  sm: "4px"
+  md: "8px"
+  lg: "16px"
+  xl: "24px"
+---
+
+> Migrated from a legacy style guide.
+> The palette above is mapped from the original tokens, which are also preserved below.
+
+## Legacy style-guide tokens
+
+### Colors
+
+- `primary`: `#C9A84C`
+- `primary-hover`: `#E8C97A`
+- `secondary`: `#A8862B`
+- `bg-page`: `#000000`
+- `bg-surface`: `#0a0a0a`
+- `text-primary`: `#FFFFFF`
+- `text-secondary`: `#D4D4D4`
+- `text-muted`: `#A3A3A3`
+- `border`: `rgba(255,255,255,0.06)`
+- `accent`: `#E8C97A`
+
+### Typography
+
+- `heading`: `{"family":"Outfit","size":"2.5rem","url":"https://fonts.googleapis.com/css2?family=Outfit:wght@700;900&display=swap"}`
+- `body`: `{"family":"Outfit","size":"1rem","url":"https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500&display=swap"}`
+
+### Spacing
+
+- `xs`: `0.5rem`
+- `sm`: `1rem`
+- `md`: `1.5rem`
+- `lg`: `2rem`
+- `xl`: `3rem`
+
+### Radius
+
+- `sm`: `4px`
+- `md`: `8px`
+- `lg`: `16px`
+- `xl`: `24px`
+
+## Design instructions
+
+# Gallos Gold — Premium Betting Aesthetics
+
+## 1. Visual Signature: "The High Roller"
+The design language is centered around the concept of an exclusive, high-stakes underground betting club. It uses a **High Contrast** approach where absolute black (#000000) serves as the canvas for rich, textured gold accents. The atmosphere is nocturnal, expensive, and intense.
+
+## 2. Layout & Composition
+- **Diagonal Dynamics**: Use the 45-degree angle from the brand image (`shared/login_background.png`) as a recurring motif. This can be seen in background splits, card border-glows, or as decorative "light rays."
+- **Focus**: The composition should be strictly centered on mobile to emphasize the "Entry" experience. On larger screens, the login card can be slightly offset or interact with large decorative typography.
+
+## 3. Component Styling
+- **Login Card**: A "Floating Monolith" look. High-density glassmorphism (heavy blur, very low opacity black background) with a thin, 1px gold border that has a subtle gradient sweep animation.
+- **Inputs**: Dark surfaces with no background by default, only a bottom border that expands or glows in gold (--primary) when focused. Placeholders should be very muted (--text-muted).
+- **Buttons**: The primary "Entrar" button must feel substantial. A solid gold gradient (--primary to --secondary) with a "metallic shine" effect passing through periodically.
+- **Micro-details**: Use small "embers" or gold dust particles floating in the background to add depth.
+
+## 4. Typography
+- **Brand Title**: "Gallo Gold" in high-weight Outfit (#font-h1) with extreme tracking (-0.05em) and a subtle metallic reflection effect.
+- **Labels & Copy**: All in Spanish ("Usuario", "Contraseña", "Iniciar Sesión"). Use wide letter spacing for labels to give a luxury fashion vibe.
+
+## 5. Motion & Texture
+- **Atmospheric Animation**: Slow, drifting "light leaks" in the background using radial gradients.
+- **Interaction**: GSAP-driven staggered entry of the logo, then the card, then the form fields.
+- **Grain**: A very subtle noise overlay (2-3% opacity) over the entire black background to avoid flat digital blacks and add a filmic quality.

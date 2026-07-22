@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gallos — Vista de Espectadores</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #000000;
+      --s1: #0a0a0a;
+      --s2: #141414;
+      --s3: #1E1E1E;
+      --border: rgba(255,255,255,.08);
+      --border2: rgba(255,255,255,.12);
+      --gold: #C9A84C;
+      --gold2: #E8C97A;
+      --gold3: #A8862B;
+      --gold-bg: rgba(201,168,76,.10);
+      --gold-bdr: rgba(201,168,76,.30);
+      --rojo2: #E74C3C;
+      --rojo-bg: rgba(231,76,60,.13);
+      --green2: #2ECC71;
+      --green-bg: rgba(46,204,113,.12);
+      --text: #FFFFFF;
+      --text2: #D4D4D4;
+      --text3: #A3A3A3;
+      --r: 12px;
+      --r2: 8px;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 15%, rgba(201,168,76,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 38% at 82% 82%, rgba(192,57,43,.04) 0%, transparent 54%),
+        linear-gradient(135deg, rgba(201,168,76,.018) 0%, transparent 35%, rgba(255,255,255,.012) 100%);
+    }
+    #app { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── SCREEN: PIN ENTRY ── */
+    #pin-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      gap: 20px;
+    }
+    #pin-screen.hidden { display: none; }
+
+    .pv-brand {
+      text-align: center;
+    }
+    .pv-brand-icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+    .pv-brand-name {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #A8862B 0%, #C9A84C 30%, #E8C97A 55%, #C9A84C 80%, #A8862B 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .pv-brand-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 4px;
+    }
+    .pv-brand-desc {
+      font-size: 14px;
+      color: var(--text3);
+      margin-top: 14px;
+      font-weight: 500;
+    }
+
+    .pv-pin-card {
+      width: 100%;
+      max-width: 360px;
+      background: linear-gradient(160deg, rgba(30,26,19,.97), rgba(12,10,8,.99));
+      border: 1px solid var(--gold-bdr);
+      border-radius: 18px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.75), 0 0 50px rgba(201,168,76,.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .pv-pin-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #C9A84C, #E8C97A, #C9A84C, transparent);
+    }
+
+    .pv-pin-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text3);
+      text-align: center;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pv-pin-input-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+    .pv-pin-input {
+      width: 100%;
+      max-width: 280px;
+      height: 64px;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(255,255,255,.04);
+      border: 2px solid var(--border2);
+      border-radius: 12px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, background .2s, box-shadow .2s;
+      caret-color: var(--gold);
+      padding: 0 12px;
+    }
+    .pv-pin-input::placeholder {
+      color: rgba(255,255,255,.08);
+      letter-spacing: 14px;
+      font-weight: 500;
+    }
+    .pv-pin-input:focus {
+      border-color: var(--gold);
+      background: rgba(201,168,76,.06);
+      box-shadow: 0 0 20px rgba(201,168,76,.12);
+    }
+    .pv-pin-error {
+      font-size: 13px;
+      color: var(--rojo2);
+      text-align: center;
+      margin-bottom: 12px;
+      min-height: 20px;
+      font-weight: 600;
+    }
+    .pv-pin-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #E8C97A, #C9A84C, #A8862B);
+      border: none;
+      color: #0a0806;
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: box-shadow .25s, transform .15s;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      box-shadow: 0 6px 20px rgba(201,168,76,.20);
+    }
+    .pv-pin-btn:active { transform: scale(.97); }
+    .pv-pin-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* ── SCREEN: VIEWER ── */
+    #viewer-screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+    #viewer-screen.visible { display: flex; }
+
+    .pv-topbar {
+      background: linear-gradient(90deg, rgba(26,23,18,.96), rgba(10,10,10,.96));
+      border-bottom: 1px solid var(--gold-bdr);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .pv-topbar::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #C9A84C, #E8C97A, #C9A84C, transparent);
+    }
+    .pv-topbar-brand {
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--gold2);
+      letter-spacing: 1px;
+    }
+    .pv-topbar-live {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--green2);
+    }
+    .pv-topbar-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green2);
+      animation: livePulse 1.5s ease-in-out infinite;
+      box-shadow: 0 0 8px var(--green2);
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
+    .pv-topbar-time {
+      font-size: 12px;
+      color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .pv-topbar-refresh {
+      font-size: 11px;
+      color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pv-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 12px 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .pv-content::-webkit-scrollbar { width: 5px; }
+    .pv-content::-webkit-scrollbar-thumb { background: var(--gold-bdr); border-radius: 3px; }
+
+    .pv-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text3);
+    }
+    .pv-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+    .pv-empty-msg { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .pv-empty-sub { font-size: 14px; color: var(--text3); }
+
+    /* ── FIGHT CARDS ── */
+    .pv-fight {
+      background: linear-gradient(145deg, rgba(28,26,22,.96), rgba(20,18,15,.98));
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin-bottom: 12px;
+      overflow: hidden;
+      position: relative;
+      animation: cardIn .35s ease both;
+    }
+    .pv-fight::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), var(--gold2), var(--gold), transparent);
+      opacity: .5;
+    }
+    .pv-fight.active {
+      border-color: var(--gold-bdr);
+      box-shadow: 0 0 20px rgba(201,168,76,.08), 0 0 0 1px rgba(201,168,76,.15);
+      animation: activeFight 2s ease-in-out infinite;
+    }
+    @keyframes activeFight {
+      0%, 100% { box-shadow: 0 0 20px rgba(201,168,76,.08), 0 0 0 1px rgba(201,168,76,.15); }
+      50% { box-shadow: 0 0 30px rgba(201,168,76,.18), 0 0 0 1px rgba(201,168,76,.25); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .pv-fight-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .pv-fight-num {
+      font-size: 22px;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--gold2);
+      letter-spacing: -1px;
+    }
+    .pv-fight-status {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .pv-fight-status.espera {
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-bdr);
+      color: var(--gold);
+    }
+    .pv-fight-status.activa {
+      background: var(--green-bg);
+      border: 1px solid rgba(46,204,113,.35);
+      color: var(--green2);
+      animation: pulseStatus 2s ease-in-out infinite;
+    }
+    @keyframes pulseStatus {
+      0%, 100% { box-shadow: 0 0 6px rgba(46,204,113,.1); }
+      50% { box-shadow: 0 0 16px rgba(46,204,113,.25); }
+    }
+    .pv-fight-status.cerrada {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      color: var(--text3);
+    }
+
+    .pv-fight-winner {
+      padding: 10px 16px;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: center;
+      font-family: 'Outfit', sans-serif;
+      border-bottom: 1px solid var(--border);
+    }
+    .pv-fight-winner.rojo { background: var(--rojo-bg); color: var(--rojo2); }
+    .pv-fight-winner.verde { background: var(--green-bg); color: var(--green2); }
+    .pv-fight-winner.empate { background: var(--gold-bg); color: var(--gold2); }
+    .pv-fight-winner.anulada { background: rgba(255,255,255,.03); color: var(--text3); }
+
+    .pv-fight-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .pv-col {
+      padding: 10px 14px;
+    }
+    .pv-col:first-child {
+      border-right: 1px solid var(--border);
+    }
+    .pv-col-hdr {
+      font-size: 13px;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pv-col-hdr.r { color: var(--rojo2); }
+    .pv-col-hdr.v { color: var(--green2); }
+    .pv-col-total {
+      font-size: 11px;
+      opacity: .7;
+      font-weight: 700;
+    }
+
+    .pv-bet {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      font-size: 14px;
+    }
+    .pv-bet:last-child { border-bottom: none; }
+    .pv-bet-name {
+      font-weight: 600;
+      color: var(--text2);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      margin-right: 8px;
+    }
+    .pv-bet-amt {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .pv-bet-amt.r { color: var(--rojo2); }
+    .pv-bet-amt.v { color: var(--green2); }
+
+    .pv-col-empty {
+      font-size: 12px;
+      color: var(--text3);
+      opacity: .5;
+      padding: 6px 0;
+    }
+
+    /* ── STATUS BAR ── */
+    .pv-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(0,0,0,.4);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      font-size: 12px;
+      color: var(--text3);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .pv-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green2);
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+    .pv-status-offline { color: var(--rojo2); }
+    .pv-status-offline .pv-status-dot { background: var(--rojo2); animation: none; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 767px) {
+      .pv-brand-icon { font-size: 40px; }
+      .pv-brand-name { font-size: 22px; }
+      .pv-pin-card { padding: 22px 18px 20px; }
+      .pv-pin-input { height: 56px; font-size: 28px; letter-spacing: 10px; max-width: 240px; }
+      .pv-pin-btn { font-size: 16px; padding: 14px; }
+      .pv-topbar { padding: 10px 12px; }
+      .pv-topbar-brand { font-size: 14px; }
+      .pv-fight-num { font-size: 18px; }
+      .pv-fight-head { padding: 10px 12px; }
+      .pv-fight-cols { grid-template-columns: 1fr; }
+      .pv-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+      .pv-col { padding: 8px 12px; }
+      .pv-bet { font-size: 13px; }
+      .pv-col-hdr { font-size: 12px; }
+      .pv-fight-winner { font-size: 14px; padding: 8px 12px; }
+      .pv-content { padding: 8px 8px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- PIN SCREEN -->
+    <div id="pin-screen">
+      <div class="pv-brand">
+        <div class="pv-brand-icon">🐓</div>
+        <div class="pv-brand-name">Gallo Gold</div>
+        <div class="pv-brand-sub">By Pinitos</div>
+        <div class="pv-brand-desc">Vista de Espectadores</div>
+      </div>
+
+      <div class="pv-pin-card">
+        <div class="pv-pin-label">Código de Acceso</div>
+        <div class="pv-pin-input-wrap">
+          <input class="pv-pin-input" id="pin-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" autocomplete="off" autofocus>
+        </div>
+        <div class="pv-pin-error" id="pin-error"></div>
+        <button class="pv-pin-btn" id="pin-btn" onclick="submitPin()">Entrar</button>
+      </div>
+    </div>
+
+    <!-- VIEWER SCREEN -->
+    <div id="viewer-screen">
+      <div class="pv-topbar">
+        <span class="pv-topbar-brand">🐓 Gallo Gold</span>
+        <span class="pv-topbar-time" id="pv-time"></span>
+        <span class="pv-topbar-live">
+          <span class="pv-topbar-live-dot"></span>
+          EN VIVO
+        </span>
+      </div>
+
+      <div class="pv-content" id="pv-content">
+        <div class="pv-empty">
+          <div class="pv-empty-icon">🏟️</div>
+          <div class="pv-empty-msg">Hoy no hay peleas</div>
+          <div class="pv-empty-sub">Las peleas aparecerán aquí cuando se registren</div>
+        </div>
+      </div>
+
+      <div class="pv-status" id="pv-status">
+        <span class="pv-status-dot"></span>
+        <span>Conectado · Actualizando cada 5s</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── SUPABASE ──
+    const SUPABASE_URL = 'https://nqrprvaszwocvlrjsuwr.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcnBydmFzendvY3ZscmpzdXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMTIxNDUsImV4cCI6MjA5Njc4ODE0NX0.Mwv-gANBSyR2IuJDgqoG5B1v_JSpTaXcbhSGsJw08fE';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false }
+    });
+
+    // ── STATE ──
+    let refreshInterval = null;
+    const fmt = n => '$' + Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // ── PIN INPUT HANDLING ──
+    const pinInput = document.getElementById('pin-input');
+    const pinError = document.getElementById('pin-error');
+    const pinBtn = document.getElementById('pin-btn');
+
+    pinInput.addEventListener('input', function() {
+      this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+      pinBtn.disabled = this.value.length !== 6;
+      showPinError('');
+    });
+    pinInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') submitPin();
+    });
+    pinInput.addEventListener('focus', function() { this.select(); });
+
+    function showPinError(msg) {
+      pinError.textContent = msg || '';
+    }
+
+    // ── SUBMIT PIN ──
+    async function submitPin() {
+      const pin = pinInput.value.replace(/[^0-9]/g, '').slice(0, 6);
+      if (pin.length !== 6) return;
+      pinBtn.disabled = true;
+      pinBtn.textContent = 'Verificando…';
+      showPinError('');
+
+      try {
+        const { data, error } = await sb.rpc('get_player_view_data', { p_pin: pin });
+
+        if (error) {
+          if (error.message && error.message.includes('PIN')) {
+            showPinError('Código incorrecto');
+          } else {
+            showPinError('Error de conexión: ' + error.message);
+          }
+          pinBtn.disabled = false;
+          pinBtn.textContent = 'Entrar';
+          pinInput.value = '';
+          pinInput.focus();
+          return;
+        }
+
+        sessionStorage.setItem('pv_pin', pin);
+        showViewer(data);
+      } catch (e) {
+        showPinError('Error de conexión');
+        pinBtn.disabled = false;
+        pinBtn.textContent = 'Entrar';
+      }
+    }
+
+    // ── VIEWER ──
+    function showViewer(data) {
+      document.getElementById('pin-screen').classList.add('hidden');
+      document.getElementById('viewer-screen').classList.add('visible');
+      renderFights(data);
+      updateTime();
+      if (refreshInterval) clearInterval(refreshInterval);
+      refreshInterval = setInterval(refreshData, 5000);
+    }
+
+    function updateTime() {
+      const el = document.getElementById('pv-time');
+      if (el) {
+        el.textContent = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+
+    async function refreshData() {
+      const pin = sessionStorage.getItem('pv_pin');
+      if (!pin) {
+        // PIN perdido — volver a pantalla de PIN
+        clearInterval(refreshInterval);
+        document.getElementById('viewer-screen').classList.remove('visible');
+        document.getElementById('pin-screen').classList.remove('hidden');
+        showPinError('Sesión expirada, ingresa el código nuevamente');
+        return;
+      }
+      try {
+        const { data, error } = await sb.rpc('get_player_view_data', { p_pin: pin });
+        if (error) throw error;
+        renderFights(data);
+        updateTime();
+        document.getElementById('pv-status').className = 'pv-status';
+      } catch (e) {
+        document.getElementById('pv-status').className = 'pv-status pv-status-offline';
+      }
+    }
+
+    function renderFights(data) {
+      const el = document.getElementById('pv-content');
+      const peleas = data?.peleas || [];
+
+      if (!peleas.length) {
+        el.innerHTML = `
+          <div class="pv-empty">
+            <div class="pv-empty-icon">🏟️</div>
+            <div class="pv-empty-msg">Hoy no hay peleas</div>
+            <div class="pv-empty-sub">Las peleas aparecerán aquí cuando se registren</div>
+          </div>`;
+        return;
+      }
+
+      const statusLabel = { espera: 'Abierta', activa: 'EN VIVO', cerrada: 'Terminada' };
+      const statusClass = { espera: 'espera', activa: 'activa', cerrada: 'cerrada' };
+
+      el.innerHTML = peleas.map((p, i) => {
+        const isActiva = p.estado === 'activa';
+        const isCerrada = p.estado === 'cerrada';
+        const apuestas = p.apuestas || [];
+        const rojos = apuestas.filter(a => a.bando === 'rojo');
+        const verdes = apuestas.filter(a => a.bando === 'verde');
+        const tR = rojos.reduce((s, a) => s + parseFloat(a.monto || 0), 0);
+        const tV = verdes.reduce((s, a) => s + parseFloat(a.monto || 0), 0);
+
+        let winnerHtml = '';
+        if (isCerrada && p.ganador) {
+          const wClass = p.ganador === 'rojo' ? 'rojo' : p.ganador === 'verde' ? 'verde' : p.ganador === 'empate' ? 'empate' : 'anulada';
+          const wLabel = p.ganador === 'rojo' ? '🏆 Ganó Rojo' : p.ganador === 'verde' ? '🏆 Ganó Verde' : p.ganador === 'empate' ? '◆ Empate' : '✕ Anulada';
+          winnerHtml = `<div class="pv-fight-winner ${wClass}">${wLabel}</div>`;
+        }
+
+        const betRow = (a) => {
+          const cls = a.bando === 'rojo' ? 'r' : 'v';
+          return `<div class="pv-bet"><span class="pv-bet-name">${escapeHtml(a.jugador_nombre)}</span><span class="pv-bet-amt ${cls}">${fmt(a.monto)}</span></div>`;
+        };
+
+        return `
+          <div class="pv-fight${isActiva ? ' active' : ''}" style="animation-delay:${i * 60}ms">
+            <div class="pv-fight-head">
+              <span class="pv-fight-num">#${p.num}</span>
+              <span class="pv-fight-status ${statusClass[p.estado] || 'cerrada'}">${statusLabel[p.estado] || 'Terminada'}${isActiva ? ' 🔴' : ''}</span>
+            </div>
+            ${winnerHtml}
+            <div class="pv-fight-cols">
+              <div class="pv-col">
+                <div class="pv-col-hdr r">● Rojo <span class="pv-col-total">${fmt(tR)}</span></div>
+                ${rojos.length ? rojos.map(betRow).join('') : '<div class="pv-col-empty">Sin apuestas</div>'}
+              </div>
+              <div class="pv-col">
+                <div class="pv-col-hdr v">● Verde <span class="pv-col-total">${fmt(tV)}</span></div>
+                ${verdes.length ? verdes.map(betRow).join('') : '<div class="pv-col-empty">Sin apuestas</div>'}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── UTILITIES ──
+    function escapeHtml(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.appendChild(document.createTextNode(str));
+      return d.innerHTML;
+    }
+
+    // ── CHECK SAVED PIN ON LOAD ──
+    document.addEventListener('DOMContentLoaded', async () => {
+      const savedPin = sessionStorage.getItem('pv_pin');
+      if (savedPin) {
+        try {
+          const { data, error } = await sb.rpc('get_player_view_data', { p_pin: savedPin });
+          if (!error && data) {
+            showViewer(data);
+            return;
+          }
+        } catch (e) { /* PIN inválido o expirado */ }
+        sessionStorage.removeItem('pv_pin');
+      }
+      pinInput?.focus();
+    });
+  </script>
+</body>
+</html>

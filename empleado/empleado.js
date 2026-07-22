@@ -95,6 +95,8 @@ function setTab(tab) {
   document.getElementById(`ni-${tab}`)?.classList.add('active');
   document.getElementById(`mob-ni-${tab}`)?.classList.add('active');
 
+  refreshData();
+
   if (tab === 'peleas') renderPeleas();
 }
 
@@ -293,7 +295,14 @@ function renderToolbar() {
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="number" id="pelea-search-inp" placeholder="Buscar #" value="${searchPeleaQuery || ''}" oninput="searchPelea(this.value)">
     </div>`}
-    <button class="bc-n" onclick="nuevaPelea()">${I.plus} Nueva pelea</button>`;
+    <button class="bc-n" onclick="nuevaPelea()">${I.plus} Nueva pelea</button>
+    <div class="ctrl-sep"></div>
+    <div class="pin-badge" id="pin-badge">
+      <span class="pin-lbl">📺 PIN</span>
+      <span class="pin-code" id="pin-code">······</span>
+      <button class="pin-btn" onclick="copyPlayerPin()" title="Copiar PIN">📋</button>
+      <button class="pin-btn" onclick="refreshPlayerPin()" title="Generar nuevo PIN">↻</button>
+    </div>`;
 
   // Insertar banner después del toolbar si hay pelea activa
   const wrap = document.getElementById('peleas-toolbar').parentElement;
@@ -305,6 +314,41 @@ function renderToolbar() {
     const toolbar = document.getElementById('peleas-toolbar');
     toolbar.insertAdjacentElement('afterend', bannerEl.firstElementChild);
   }
+
+  loadPlayerPinBadge();
+}
+
+async function loadPlayerPinBadge() {
+  const el = document.getElementById('pin-code');
+  if (!el) return;
+  const pin = await getPlayerPin();
+  el.textContent = pin || '——';
+  el.style.opacity = pin ? '1' : '.4';
+}
+
+async function copyPlayerPin() {
+  const pin = await getPlayerPin();
+  if (!pin) { toast('No hay PIN configurado', 'error'); return; }
+  try {
+    await navigator.clipboard.writeText(pin);
+    toast('PIN copiado: <strong>' + pin + '</strong>', 'success');
+  } catch {
+    toast('PIN: ' + pin, 'info');
+  }
+}
+
+async function refreshPlayerPin() {
+  const ok = await showConfirm('¿Generar nuevo PIN para la vista de espectadores?<br><span style="font-size:12px;color:var(--text3);">El PIN anterior dejará de funcionar.</span>', '↻', 'Generar', 'primary');
+  if (!ok) return;
+  const pin = generatePlayerPin();
+  await setPlayerPin(pin);
+  await logAction('config', 'PIN de vista de espectadores regenerado a <strong>' + pin + '</strong>', '📺');
+  const el = document.getElementById('pin-code');
+  if (el) {
+    el.textContent = pin;
+    el.style.opacity = '1';
+  }
+  toast('Nuevo PIN: <strong>' + pin + '</strong>', 'success');
 }
 
 function expandirTodas() {

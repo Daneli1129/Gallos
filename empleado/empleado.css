@@ -1521,3 +1521,48 @@
   .pf-cnt { font-size: 7px; }
   .peleas-toolbar { padding: 8px; gap: 4px; }
 }
+
+/* ── PIN BADGE ── */
+.pin-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(201,168,76,.08);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 8px;
+  flex-shrink: 0;
+  animation: fadeUp .3s ease;
+}
+.pin-lbl {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--gold);
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.pin-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--gold2);
+  letter-spacing: 3px;
+  transition: opacity .25s;
+}
+.pin-btn {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text3);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.pin-btn:hover {
+  background: var(--gold-bg);
+  border-color: var(--gold-bdr);
+  color: var(--gold);
+}
