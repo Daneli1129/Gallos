@@ -496,43 +496,13 @@ function renderFicha() {
         </div>
       </div>
 
-      <!-- Módulo de Crédito y Control de Apostador -->
-      <div class="fc-saldo-ant" style="margin-top: 12px; border-top: 1px solid var(--border2); padding-top: 12px;">
-        <div class="fc-sa-row" style="margin-bottom: 8px;">
-          <span class="fc-sa-lbl">Límite de Crédito</span>
-          <div class="fc-sa-inp-grp">
-            <span class="fc-sa-prefix">$</span>
-            <input class="sa-inp-admin" type="number" value="${j.limiteCredito}" onchange="updLimiteCredito('${j.id}', this.value)">
-          </div>
-        </div>
-        <div class="fc-sa-row" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span class="fc-sa-lbl">Crédito Utilizado</span>
-          <span style="font-family:'JetBrains Mono',monospace; font-weight:bold; color:${j.creditoUtilizado > 0 ? 'var(--rojo2)' : 'var(--text)'};">
-            ${fmt(j.creditoUtilizado)}
-          </span>
-        </div>
-        <div class="fc-sa-row" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span class="fc-sa-lbl">Estado Candado</span>
-          <select class="sa-inp-admin" onchange="toggleEstadoCandado('${j.id}', this.value === 'bloqueado')" style="width: auto; padding: 4px 8px; background: #222; color: #fff; border: 1px solid var(--border2); border-radius: 4px; font-family: inherit; font-size: 11px;">
-            <option value="activo" ${!j.estadoCandado ? 'selected' : ''}>🔓 Activo (Desbloqueado)</option>
-            <option value="bloqueado" ${j.estadoCandado ? 'selected' : ''}>🔒 Bloqueado</option>
-          </select>
-        </div>
-      </div>
+      <!-- Módulo de Crédito y Control de Apostador (Rediseñado) -->
+      ${renderCreditModuleUI(j)}
 
-      <div class="fc-saldo-ant" style="margin-top: 12px; padding: 12px; background: rgba(199, 168, 76, 0.05); border: 1px dashed var(--gold); border-radius: 6px;">
-        <div style="font-size:10px; color:var(--gold); font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; font-family:'JetBrains Mono',monospace;">Registrar Pago de Crédito</div>
-        <div style="display:flex; gap:8px;">
-          <input class="sa-inp-admin" id="pago-monto-${j.id}" type="number" placeholder="Monto pagado" style="flex:1; height: 32px; font-size: 12px;">
-          <button class="btn-sm" onclick="uiRegistrarPago('${j.id}')" style="background:var(--gold); color:#000; font-weight:bold; border:none; border-radius:4px; padding:0 16px; cursor:pointer; height: 32px;">Registrar</button>
-        </div>
-        <div style="margin-top:8px; display:flex; align-items:center; gap:6px;">
-          <input type="checkbox" id="pago-desbloquear-${j.id}" checked style="margin:0; cursor:pointer;">
-          <label for="pago-desbloquear-${j.id}" style="font-size:10px; color:var(--text2); cursor:pointer; user-select:none;">Desbloquear candado al pagar</label>
-        </div>
-      </div>
+      <!-- Historial de Créditos y Pagos -->
+      ${renderCreditHistoryUI(j)}
 
-      <div class="fc-tabla">
+      <div class="fc-tabla" style="margin-top: 14px;">
         <div class="fc-tabla-hdr">
           <div style="border-right:1px solid var(--border2);"><div class="fc-col-hd p">Perdidas</div></div>
           <div><div class="fc-col-hd g">Ganadas</div></div>
@@ -567,6 +537,139 @@ function renderFicha() {
     </div>`;
 }
 
+function renderCreditModuleUI(j) {
+  const limiteCredito = j.limiteCredito || 0;
+  const creditoUtilizado = j.creditoUtilizado || 0;
+  const creditoDisponible = Math.max(0, limiteCredito - creditoUtilizado);
+  const esExcedido = creditoUtilizado >= limiteCredito && limiteCredito > 0;
+  const estaBloqueado = j.estadoCandado || esExcedido;
+
+  return `
+    <div class="fc-credit-section">
+      <div class="fc-credit-title">
+        <span>💳 Control de Crédito</span>
+        <span class="credit-status-pill ${estaBloqueado ? 'bloqueado' : 'activo'}" style="font-size:10px; padding:2px 8px; font-weight:800;">
+          ${estaBloqueado ? '🔒 BLOQUEADO' : '🔓 ACTIVO'}
+        </span>
+      </div>
+
+      <!-- Límite de Crédito editable manualmente con Botón Aceptar -->
+      <div class="fc-sa-row">
+        <span class="fc-sa-lbl">Límite de Crédito</span>
+        <div class="fc-sa-inp-btn-grp">
+          <div class="fc-sa-inp-grp" style="flex:1;">
+            <span class="fc-sa-prefix">$</span>
+            <input class="sa-inp-admin" id="limite-inp-${j.id}" type="number" value="${limiteCredito}" step="100" min="0" onkeydown="if(event.key==='Enter') saveLimiteCreditoUI('${j.id}')">
+          </div>
+          <button class="btn-accept-credit" onclick="saveLimiteCreditoUI('${j.id}')" title="Guardar límite de crédito">
+            ✓ Aceptar
+          </button>
+        </div>
+      </div>
+
+      <!-- Crédito Utilizado (Deuda) -->
+      <div class="fc-sa-row" style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="fc-sa-lbl">Crédito Debe / Utilizado</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-weight:bold; color:${creditoUtilizado > 0 ? 'var(--rojo2)' : 'var(--text3)'}; font-size:13px;">
+          ${fmt(creditoUtilizado)}
+        </span>
+      </div>
+
+      <!-- Estado Automático con Crédito Disponible -->
+      <div class="credit-status-pill ${estaBloqueado ? 'bloqueado' : 'activo'}">
+        <div>
+          <div style="font-size:11px; font-weight:800;">${estaBloqueado ? '🔒 CRÉDITO BLOQUEADO' : '🔓 CRÉDITO ACTIVO'}</div>
+          <div style="font-size:9.5px; opacity:0.85; margin-top:2px;">
+            ${estaBloqueado
+              ? (esExcedido ? 'Límite alcanzado (debe todo su crédito)' : 'Bloqueado por candado administrativo')
+              : `Disponible para apostar: ${fmt(creditoDisponible)}`}
+          </div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:900;">
+          ${estaBloqueado ? '$0.00' : fmt(creditoDisponible)}
+        </div>
+      </div>
+
+      <!-- Formulario Llamativo para Registrar Pago de Crédito -->
+      <div class="credit-pay-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:10.5px; color:var(--gold); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; font-family:'JetBrains Mono',monospace;">
+            💵 Registrar Pago de Crédito
+          </div>
+          ${creditoUtilizado > 0 ? `<button class="pay-quick-chip" onclick="fillPayTotal('${j.id}', ${creditoUtilizado})">Pagar Total (${fmt(creditoUtilizado)})</button>` : ''}
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div class="fc-sa-inp-grp" style="flex:1;">
+            <span class="fc-sa-prefix">$</span>
+            <input class="sa-inp-admin" id="pago-monto-${j.id}" type="number" placeholder="Monto a pagar..." step="10" min="1" max="${creditoUtilizado}" style="height:32px; font-size:12px;" onkeydown="if(event.key==='Enter') uiRegistrarPago('${j.id}')">
+          </div>
+          <button class="btn-sm" onclick="uiRegistrarPago('${j.id}')" style="background:var(--gold); color:#000; font-weight:800; border:none; border-radius:6px; padding:0 14px; cursor:pointer; height:32px; font-family:'Outfit',sans-serif; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(201,168,76,0.3); flex-shrink:0;">
+            ✓ Registrar Pago
+          </button>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:10px; color:var(--text3);">
+          <span>Máximo a pagar: <strong style="color:${creditoUtilizado > 0 ? 'var(--gold)' : 'var(--text3)'}; font-family:'JetBrains Mono',monospace;">${fmt(creditoUtilizado)}</strong></span>
+          <span style="color:var(--green2); font-size:9.5px;">✓ Auto-desbloquea al abonar</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCreditHistoryUI(j) {
+  // Filtrar de la bitácora global todas las acciones relacionadas a este jugador
+  const logsJugador = bitacora.filter(b => 
+    b.msg.includes(j.nombre) && 
+    (b.msg.includes('crédito') || b.msg.includes('Crédito') || b.msg.includes('pago') || b.msg.includes('Pago') || b.msg.includes('candado') || b.msg.includes('Límite'))
+  );
+
+  return `
+    <div class="credit-history-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-size:10.5px; font-weight:800; color:var(--gold); text-transform:uppercase; letter-spacing:0.5px; font-family:'JetBrains Mono',monospace; display:flex; align-items:center; gap:6px;">
+          📜 Historial de Créditos y Pagos
+        </div>
+        <span style="font-size:9.5px; color:var(--text3);">${logsJugador.length} eventos</span>
+      </div>
+
+      <div class="ch-timeline">
+        ${logsJugador.length > 0 ? logsJugador.map(log => `
+          <div class="ch-item">
+            <div class="ch-item-icon">${log.icon || '📋'}</div>
+            <div class="ch-item-info">
+              <div class="ch-item-title">${log.msg}</div>
+              <div class="ch-item-date">${log.fecha} ${log.hora} · Por ${log.user}</div>
+            </div>
+          </div>
+        `).join('') : `
+          <div style="padding:14px; text-align:center; color:var(--text3); font-size:11px;">
+            Sin historial de pagos o créditos registrado aún para ${j.nombre}.
+          </div>
+        `}
+      </div>
+    </div>`;
+}
+
+function fillPayTotal(id, total) {
+  const inp = document.getElementById(`pago-monto-${id}`);
+  if (inp) {
+    inp.value = total;
+    inp.focus();
+  }
+}
+
+async function saveLimiteCreditoUI(id) {
+  const inp = document.getElementById(`limite-inp-${id}`);
+  if (!inp) return;
+  const val = parseFloat(inp.value);
+  if (isNaN(val) || val < 0) {
+    toast('⚠️ Ingresa un límite de crédito válido', 'error');
+    return;
+  }
+  await updLimiteCredito(id, val);
+}
+
 async function updSaldoAnt(id, val) {
   const j = jugadores.find(x => x.id === id);
   if (!j) return;
@@ -599,9 +702,23 @@ async function updLimiteCredito(id, val) {
     return;
   }
 
-  await logAction('config', `Límite de crédito de <strong>${j.nombre}</strong> actualizado a ${fmt(numericVal)}`, '⚙️');
+  // Intentar guardar en historial_credito
+  try {
+    await sb.from('historial_credito').insert({
+      jugador_id: id,
+      tipo: 'limite_modificado',
+      monto: numericVal,
+      deuda_despues: j.creditoUtilizado,
+      limite_despues: numericVal,
+      nota: `Límite de crédito cambiado a ${fmt(numericVal)}`
+    });
+  } catch(e) {
+    console.warn("Tabla historial_credito no disponible:", e);
+  }
+
+  await logAction('config', `Límite de crédito de <strong>${j.nombre}</strong> actualizado a <strong>${fmt(numericVal)}</strong>`, '⚙️');
   await refreshData();
-  toast(`Límite de crédito de <strong>${j.nombre}</strong> actualizado`, 'success');
+  toast(`Límite de crédito de <strong>${j.nombre}</strong> guardado en <strong>${fmt(numericVal)}</strong>`, 'success');
 }
 
 async function toggleEstadoCandado(id, bloqueado) {
@@ -625,19 +742,32 @@ async function toggleEstadoCandado(id, bloqueado) {
 }
 
 async function uiRegistrarPago(id) {
+  const j = jugadores.find(x => x.id === id);
+  if (!j) return;
   const inp = document.getElementById(`pago-monto-${id}`);
-  const chk = document.getElementById(`pago-desbloquear-${id}`);
   if (!inp) return;
   const monto = parseFloat(inp.value) || 0;
+
   if (monto <= 0) {
-    toast('Ingresa un monto de pago válido mayor a cero', 'error');
+    toast('⚠️ Ingresa un monto de pago válido mayor a $0.00', 'error');
     return;
   }
-  const desbloquear = chk ? chk.checked : false;
-  await registrarPagoApostador(id, monto, desbloquear);
+
+  const deudaActual = j.creditoUtilizado || 0;
+  if (deudaActual <= 0) {
+    toast(`⚠️ <strong>${j.nombre}</strong> no tiene crédito pendiente por pagar`, 'error');
+    return;
+  }
+
+  if (monto > deudaActual + 0.01) {
+    toast(`⚠️ No se puede registrar un pago mayor al crédito que debe (Deuda actual: <strong>${fmt(deudaActual)}</strong>)`, 'error');
+    return;
+  }
+
+  await registrarPagoApostador(id, monto);
 }
 
-async function registrarPagoApostador(id, monto, desbloquear) {
+async function registrarPagoApostador(id, monto) {
   const j = jugadores.find(x => x.id === id);
   if (!j) return;
 
@@ -645,8 +775,12 @@ async function registrarPagoApostador(id, monto, desbloquear) {
   const updates = {
     credito_utilizado: nuevoCredito
   };
-  if (desbloquear) {
+
+  // Si al restar el pago la deuda queda por debajo del límite de crédito, desbloquear automáticamente
+  let autoDesbloqueado = false;
+  if (nuevoCredito < j.limiteCredito && j.estadoCandado) {
     updates.estado_candado = false;
+    autoDesbloqueado = true;
   }
 
   const { error } = await sb
@@ -659,14 +793,29 @@ async function registrarPagoApostador(id, monto, desbloquear) {
     return;
   }
 
-  let actMsg = `Registró pago de crédito de ${fmt(monto)} para <strong>${j.nombre}</strong>`;
-  if (desbloquear && j.estadoCandado) {
-    actMsg += ` y desactivó candado de crédito`;
+  // Intentar guardar registro específico en historial_credito
+  try {
+    await sb.from('historial_credito').insert({
+      jugador_id: id,
+      tipo: 'pago',
+      monto: monto,
+      deuda_despues: nuevoCredito,
+      limite_despues: j.limiteCredito,
+      nota: `Registró pago de crédito de ${fmt(monto)}`
+    });
+  } catch(e) {
+    console.warn("Tabla historial_credito no disponible:", e);
+  }
+
+  let actMsg = `Registró pago de crédito de <strong>${fmt(monto)}</strong> para <strong>${j.nombre}</strong> (Deuda restante: ${fmt(nuevoCredito)})`;
+  if (autoDesbloqueado) {
+    actMsg += ` y el sistema desbloqueó su crédito a 🔓 <strong>ACTIVO</strong>`;
   }
   await logAction('corte_jornada', actMsg, '💵');
   await refreshData();
-  toast(`Pago de crédito registrado con éxito para <strong>${j.nombre}</strong>`, 'success');
+  toast(`Pago de crédito de <strong>${fmt(monto)}</strong> registrado con éxito para <strong>${j.nombre}</strong>`, 'success');
 }
+
 
 // ── PELEAS (solo lectura) ─────────────────────────────────
 let searchPeleaQuery = '';
