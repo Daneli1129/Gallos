@@ -431,7 +431,40 @@ async function fetchBitacora() {
 
 // ── REFRESH DATA & REALTIME ──
 
-async function refreshData() {
+let _lastDataSig = '';
+let _rtTimer = null;
+
+function peleasSignature() {
+  const pSig = peleas
+    .map(p => `${p.num}|${p.estado}|${p.ganador || ''}|${p.apuestas.map(a => `${a.jugadorId}:${a.bando}:${a.monto}:${a.estado}:${a.resultado}`).join('+')}`)
+    .join(';');
+  let sig = pSig + '|' + JSON.stringify(appConfig) + '|' + jugadores.length;
+  if (currentTab === 'bitacora') sig += '|b' + bitacora.length;
+  return sig;
+}
+
+function snapshotPeleaUI() {
+  const sc = document.getElementById('peleas-scroll');
+  const ae = document.activeElement;
+  return {
+    scrollEl: sc,
+    scrollTop: sc ? sc.scrollTop : 0,
+    activeId: ae && ae.id ? ae.id : null
+  };
+}
+
+function restorePeleaUI(snap) {
+  if (!snap) return;
+  if (snap.scrollEl) snap.scrollEl.scrollTop = snap.scrollTop;
+  if (snap.activeId) {
+    const el = document.getElementById(snap.activeId);
+    if (el) el.focus();
+  }
+}
+
+async function refreshData(opts = {}) {
+  const silent = opts.silent === true;
+
   await fetchConfig();
   await fetchJugadores();
   await fetchPeleas();
@@ -450,6 +483,16 @@ async function refreshData() {
     selectedJugador = jugadores.find(x => x.id === selectedJugador.id) || null;
   }
 
+  const sig = peleasSignature();
+  const changed = sig !== _lastDataSig;
+  _lastDataSig = sig;
+
+  if (silent && !changed) return;
+
+  const snap = snapshotPeleaUI();
+  const scrollEl = document.getElementById('peleas-scroll');
+  if (silent && scrollEl) scrollEl.classList.add('no-anim');
+
   if (typeof renderDashboard === 'function') {
     if (currentTab === 'dashboard') renderDashboard();
     if (currentTab === 'peleas') renderPeleas();
@@ -465,16 +508,26 @@ async function refreshData() {
     if (currentTab === 'semanal') { if (typeof renderPeriodo === 'function') renderPeriodo('semanal'); }
     if (currentTab === 'bitacora') { if (typeof renderBitacora === 'function') renderBitacora(); }
   }
+
+  restorePeleaUI(snap);
+  if (silent && scrollEl) {
+    requestAnimationFrame(() => scrollEl.classList.remove('no-anim'));
+  }
 }
 
 function initRealtime() {
+  const onChange = () => {
+    clearTimeout(_rtTimer);
+    _rtTimer = setTimeout(() => refreshData({ silent: true }), 400);
+  };
+
   sb
     .channel('schema-db-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'peleas' }, () => refreshData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'apuestas' }, () => refreshData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'jugadores' }, () => refreshData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'configuraciones' }, () => refreshData())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora' }, () => refreshData())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'peleas' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'apuestas' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'jugadores' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'configuraciones' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bitacora' }, onChange)
     .subscribe();
 }
 

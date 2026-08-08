@@ -691,6 +691,8 @@ input::-ms-clear {
 }
 .pb, .ficha-card, .mini-ficha, .dash-card, .dash-section { animation: cardIn .35s cubic-bezier(.22,1,.36,1) both; }
 .pb { animation-delay: calc(var(--i, 0) * 50ms); }
+.peleas-scroll.no-anim .pb,
+.peleas-scroll.no-anim .term-row { animation: none !important; }
 
 /* ── TOAST ── */
 .toast {
